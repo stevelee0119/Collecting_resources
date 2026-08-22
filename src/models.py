@@ -123,7 +123,16 @@ class AccessMethod(BaseModel):
     credential_env_var: str | None = None
     endpoint: str = ""
     detail_endpoint: str = ""
+
+    #: VERIFIED = 공식 문서로 확인됨 / PENDING_VERIFICATION = 미확인
     verification_status: str = "PENDING_VERIFICATION"
+    #: 확인 근거가 된 공식 문서 URL
+    verified_source: str = ""
+    #: 확인 일자
+    verified_at: date | None = None
+    #: 확인 경로 — official_doc(직접 열람) / web_search(공식 문서 검색결과) / none
+    #: 감사가능성(§18.4)을 위해 "무엇을 근거로 확정했는지"를 남깁니다.
+    verified_method: str = "none"
 
 
 class RetryPolicy(BaseModel):

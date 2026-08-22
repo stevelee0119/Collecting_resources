@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
+from ..config_loader import get_secret
 from ..normalizers.normalize import clean_whitespace, normalize_doi
 from .generic_api import GenericApiConnector, dig
 
@@ -46,6 +48,23 @@ class ScienceOnConnector(GenericApiConnector):
         "keywords": "Keyword",
         "doi": "DOI",
     }
+
+    # ------------------------------------------------------------------
+    @property
+    def request_config(self) -> dict[str, Any]:
+        """API Gateway 는 token 과 별도로 client_id 를 함께 요구합니다."""
+        config = super().request_config
+        client_id = get_secret(str(getattr(self.config, "client_id_env_var", "SCIENCEON_CLIENT_ID")))
+        if client_id:
+            static = dict(config.get("static_params") or {})
+            static["client_id"] = client_id
+            config["static_params"] = static
+        else:
+            logger.warning(
+                "[scienceon] client_id 가 설정되지 않았습니다. "
+                "SCIENCEON_CLIENT_ID 를 .env 에 추가하세요."
+            )
+        return config
 
     # ------------------------------------------------------------------
     def find_oa_pdf(self, doi: str) -> tuple[str, str] | None:

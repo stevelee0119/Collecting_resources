@@ -10,7 +10,6 @@ import logging
 from collections.abc import Iterator, Sequence
 from datetime import date
 
-from ..config_loader import get_secret
 from ..models import Query, RawItem, Resource
 from ..normalizers.normalize import (
     build_work_id,
@@ -33,7 +32,9 @@ class OpenAlexConnector(SourceConnector):
     MAX_PAGES = 4
 
     def discover(self, since: date, until: date, queries: Sequence[Query]) -> Iterator[RawItem]:
+        # 2026-02-13 부터 API Key 가 필수입니다. 키가 없으면 여기서 건너뜁니다.
         method = self.require_method("OPEN_API")
+        api_key = self.secret_for(method)
         use_cursor = bool(getattr(self.config, "use_cursor", True))
         seen: set[str] = set()
         emitted = 0
@@ -53,10 +54,8 @@ class OpenAlexConnector(SourceConnector):
                 }
                 if cursor:
                     params["cursor"] = cursor
-                # polite pool — API Key 가 아니라 연락 이메일입니다.
-                if email := self.ctx.contact_email:
-                    params["mailto"] = email
-                if api_key := get_secret("OPENALEX_API_KEY"):
+                # polite pool(mailto)은 폐지되었고 인증은 API Key 로만 합니다.
+                if api_key:
                     params["api_key"] = api_key
 
                 try:

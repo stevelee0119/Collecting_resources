@@ -54,9 +54,14 @@ class LawOpenApiConnector(SourceConnector):
                     "target": target,
                     "type": "XML",
                     "query": query.query_string,
-                    "display": self.DISPLAY,
+                    "display": int(getattr(self.config, "law_display", self.DISPLAY)),
+                    "page": 1,
                     "sort": "ddes",  # 최근 공포일 순
                 }
+                # target 별 날짜범위 파라미터(예: 판례 prncYd)를 지원하면 함께 보냅니다.
+                date_params = getattr(self.config, "law_date_param", None) or {}
+                if date_param := date_params.get(target):
+                    params[date_param] = f"{since.strftime('%Y%m%d')}~{until.strftime('%Y%m%d')}"
                 try:
                     response = self.ctx.client.get(method.endpoint, params=params)
                     response.raise_for_status()

@@ -86,34 +86,41 @@ class KciConnector(SourceConnector):
         if not endpoint:
             raise EndpointNotConfiguredError(self.config.name, "OPEN_API")
 
+        # 공식 활용방법 문서의 요청 파라미터: apiCode, key, title, author, pubiYr
+        # 일자 범위 필터가 없고 발행연도(pubiYr) 단위만 제공되므로
+        # 조회 기간에 걸친 연도를 순회한 뒤 등록일 기준으로 다시 걸러냅니다.
+        api_code = str(getattr(self.config, "kci_api_code", "articleSearch"))
+        years = range(since.year, until.year + 1)
+
         emitted = 0
         for query in queries:
-            if emitted >= self._limit():
-                return
-            params = {
-                "apiCode": "articleSearch",
-                "key": api_key or "",
-                "title": query.query_string,
-                "dateFrom": since.strftime("%Y%m%d"),
-                "dateUntil": until.strftime("%Y%m%d"),
-                "displayCount": 50,
-            }
-            try:
-                response = self.ctx.client.get(endpoint, params=params)
-                response.raise_for_status()
-                records = _parse_kci_xml(response.content)
-            except Exception as exc:
-                logger.warning("[kci] Open API 질의 실패 (%s): %s", query.query_string, exc)
-                continue
-
-            for record in records:
-                record["_access_method"] = "OPEN_API"
-                yield RawItem(
-                    source_id=self.config.source_id, payload=record, discovered_by_query=query
-                )
-                emitted += 1
+            for year in years:
                 if emitted >= self._limit():
                     return
+                params = {
+                    "apiCode": api_code,
+                    "key": api_key or "",
+                    "title": query.query_string,
+                    "pubiYr": year,
+                }
+                try:
+                    response = self.ctx.client.get(endpoint, params=params)
+                    response.raise_for_status()
+                    records = _parse_kci_xml(response.content)
+                except Exception as exc:
+                    logger.warning(
+                        "[kci] Open API 질의 실패 (%s, %d년): %s", query.query_string, year, exc
+                    )
+                    continue
+
+                for record in records:
+                    record["_access_method"] = "OPEN_API"
+                    yield RawItem(
+                        source_id=self.config.source_id, payload=record, discovered_by_query=query
+                    )
+                    emitted += 1
+                    if emitted >= self._limit():
+                        return
 
     # ------------------------------------------------------------------
     def normalize(self, raw: RawItem) -> Resource | None:

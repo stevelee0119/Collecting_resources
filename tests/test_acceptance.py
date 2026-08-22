@@ -313,3 +313,79 @@ def test_no_paywall_bypass_helpers():
         content = path.read_text(encoding="utf-8").lower()
         for needle in banned:
             assert needle not in content, f"{path} 에 우회 기능이 있습니다: {needle}"
+
+
+# ---------------------------------------------------------------------------
+# 엔드포인트·검증 근거의 정직성 (§5.1 최신성 원칙, §18.4 감사가능성)
+# ---------------------------------------------------------------------------
+
+def test_verified_methods_cite_a_source(registry):
+    """VERIFIED 로 표시하려면 확인근거 URL·일자·경로가 있어야 합니다."""
+    for source in registry.sources:
+        for method in source.access_methods:
+            if method.verification_status != "VERIFIED":
+                continue
+            label = f"{source.source_id}/{method.type}"
+            assert method.verified_source, f"{label}: 확인근거 URL 이 없습니다."
+            assert method.verified_at, f"{label}: 확인 일자가 없습니다."
+            assert method.verified_method in ("official_doc", "web_search"), (
+                f"{label}: 확인 경로가 기록되지 않았습니다."
+            )
+
+
+def test_verified_source_is_on_an_official_domain(registry):
+    """확인근거는 해당 기관 또는 공식 포털의 도메인이어야 합니다."""
+    from urllib.parse import urlparse
+
+    # 공식 포털을 통해 제공되는 소스(공공데이터포털 경유 등)의 예외 도메인
+    official_portals = ("data.go.kr", "openalex.org", "crossref.org", "doaj.org", "ssrn.com")
+
+    for source in registry.sources:
+        for method in source.access_methods:
+            if not method.verified_source:
+                continue
+            host = urlparse(method.verified_source).netloc.lower()
+            base = source.base_domain.lower()
+            ok = (
+                base in host
+                or host.endswith(base)
+                or any(p in host for p in official_portals)
+                # api.core.ac.uk ↔ core.ac.uk 처럼 상위 도메인이 같은 경우
+                or ".".join(base.split(".")[-2:]) in host
+            )
+            assert ok, (
+                f"{source.source_id}: 확인근거({method.verified_source})가 "
+                f"공식 도메인({source.base_domain})이 아닙니다."
+            )
+
+
+def test_unverified_sources_have_no_guessed_endpoint(registry):
+    """확인되지 않은 소스에 추측한 엔드포인트를 넣지 않습니다 (URL 환각 금지)."""
+    for source in registry.sources:
+        for method in source.access_methods:
+            if method.verification_status == "VERIFIED":
+                continue
+            assert not method.endpoint, (
+                f"{source.source_id}/{method.type}: 확인되지 않았는데 endpoint 가 "
+                f"채워져 있습니다 ({method.endpoint})."
+            )
+
+
+def test_openalex_requires_api_key(registry):
+    """OpenAlex 는 2026-02-13 부터 API Key 가 필수입니다."""
+    openalex = registry.get("openalex")
+    method = openalex.method("OPEN_API")
+    assert method.credential_required is True
+    assert method.credential_env_var == "OPENALEX_API_KEY"
+
+    # 폐지된 polite pool 파라미터를 더 이상 보내지 않아야 합니다.
+    # (설명 주석이 아니라 실제 요청 파라미터로 쓰이는지를 확인합니다)
+    source = (PROJECT_ROOT / "src" / "connectors" / "openalex.py").read_text(encoding="utf-8")
+    assert '"mailto"' not in source
+
+
+def test_riss_has_no_bibliographic_search_endpoint(registry):
+    """RISS 공개 API 에는 일반 학술 서지 검색이 없어 endpoint 를 비워 둡니다."""
+    riss = registry.get("riss")
+    assert riss.method("OPEN_API").endpoint == ""
+    assert riss.download_policy == DownloadPolicy.LINK_ONLY

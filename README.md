@@ -116,10 +116,11 @@ python main.py doctor
 `.env` 에 실제 값을 채웁니다. **이 파일은 절대 Git 에 커밋하지 마십시오.**
 
 ```bash
-CONTACT_EMAIL=your.name@example.org     # Crossref/OpenAlex polite pool, Unpaywall 필수
+CONTACT_EMAIL=your.name@example.org     # Crossref polite pool, Unpaywall 필수 파라미터
 DLRCIS_SENDER_EMAIL=sender@gmail.com
 DLRCIS_RECEIVER_EMAIL=you@gmail.com
 DLRCIS_SMTP_PASSWORD=                   # Gmail 앱 비밀번호
+OPENALEX_API_KEY=                       # 2026-02-13 부터 필수
 KCI_API_KEY=
 NKIS_API_KEY=
 LAW_GO_KR_OC=
@@ -133,9 +134,25 @@ python main.py api-guide --excel
 ```
 
 > 인증정보가 없거나 엔드포인트가 확정되지 않은 소스는 **자동으로 건너뛰고** 나머지 소스로 계속 진행합니다.
-> 별도 발급 없이 바로 쓸 수 있는 소스: Crossref, OpenAlex, arXiv, DOAJ, Zenodo, KCI(OAI-PMH), Semantic Scholar
+>
+> **별도 발급 없이 바로 쓸 수 있는 소스**: Crossref, arXiv, DOAJ, Zenodo, Semantic Scholar, KCI(OAI-PMH)
+>
+> **주의**: OpenAlex 는 2026-02-13 부터 API Key 가 필수가 되었고 polite pool(mailto)이 폐지되었습니다.
+> 키 없이 호출하면 시험용 크레딧 소진 후 409 를 반환하므로 `OPENALEX_API_KEY` 를 발급받아야 합니다.
 
 ### 2. 수집 대상 (`config/sources.yaml`)
+
+각 접근방식에는 **확인 근거**가 함께 기록됩니다 (§18.4 감사가능성).
+
+| 필드 | 의미 |
+| --- | --- |
+| `verification_status` | `VERIFIED` = 공식 문서로 확정 / `PENDING_VERIFICATION` = 미확정 |
+| `verified_source` | 확인 근거가 된 공식 문서 URL |
+| `verified_at` | 확인 일자 |
+| `verified_method` | `official_doc`(직접 열람) / `web_search`(공식 문서 검색결과) |
+
+확인되지 않은 항목의 `endpoint` 는 **비워 둡니다.** URL 을 추측해 채우지 않으며,
+비어 있으면 해당 소스의 자동수집을 시도하지 않고 건너뜁니다.
 
 새 소스를 추가하거나 접근정책을 바꿀 때 이 파일만 수정합니다.
 엔드포인트가 비어 있으면 자동수집을 시도하지 않습니다.
@@ -261,7 +278,7 @@ P1·P2 는 본문 카드, P3 이하는 목록 링크와 첨부 Excel 로 제공�
 | 공식 API·OA 라이선스 확인 | 원문 자동 다운로드 |
 | 라이선스 불명확 | `LINK_ONLY` — 메타데이터·링크만 보존, 외부 재배포 금지 |
 | 로그인·결제·CAPTCHA 필요 | 다운로드하지 않고 사유를 기록 |
-| RISS (Open API 미승인) | 직접 크롤링하지 않고 공식 Landing Page 보존 |
+| RISS | 공개 API 는 상호대차·E-DDS·통계·FRIC 용이며 학술 서지 검색 API 가 없어 Landing Page 만 보존 |
 | SSRN | 외부 학술 메타데이터로 발견 → 공식 Abstract Page 연결 (자동 다운로드 없음) |
 | robots.txt 금지 경로 | 요청하지 않음 |
 | 403 / 429 | 즉시 우회하지 않고 backoff 후 정책 재점검, 연속 실패 시 소스 일시 비활성화 |

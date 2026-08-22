@@ -34,19 +34,27 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
     "kci": {
         "purpose_example": "군사법·형사법 분야 국내 학술논문 메타데이터의 정기 수집 및 사내 리서치 색인 구축",
         "account_required": "예 (KCI 회원가입)",
-        "menu_path": "KCI 오픈 서비스 → Open API 신청 메뉴에서 이용 신청",
+        "menu_path": (
+            "KCI 포털 → Open API 목록(openApiList.kci) → 사용하려는 API 선택 후 이용 신청. "
+            "활용방법은 openApiConnSamp.kci, 명세서는 openDataView.kci 에서 확인"
+        ),
         "approval": "신청 후 운영기관 검토",
         "pricing": UNKNOWN,
         "scopes": "해당 없음 (API Key 방식)",
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source kci --dry-run",
         "renewal": UNKNOWN,
-        "cautions": "OAI-PMH 는 별도 인증 없이 사용할 수 있는지 독립적으로 확인하십시오.",
+        "cautions": (
+            "OAI-PMH(https://open.kci.go.kr/oai/request)는 별도 인증 없이 사용 가능한 것으로 "
+            "안내되어 있어 이 경로를 우선 사용합니다. Open API 는 apiCode/key/title/author/pubiYr "
+            "파라미터를 사용하며, 일자 범위가 아닌 발행연도(pubiYr) 단위 필터만 제공합니다. "
+            "제공 API: articleSearch / articleDetail / referenceSearch / citation / citationDetail"
+        ),
     },
     "riss": {
         "purpose_example": "국방·법률 주제 학술자료의 서지 메타데이터 수집 (원문 자동 다운로드 없음)",
         "account_required": "예",
-        "menu_path": "RISS 고객센터/제휴 문의를 통해 Open API 활용 신청",
+        "menu_path": "RISS API 센터(apicenter/apiMain.do)에서 제공 API 확인 후 신청",
         "approval": "기관 검토·승인 필요",
         "pricing": UNKNOWN,
         "scopes": "해당 없음",
@@ -54,21 +62,31 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "test": "python main.py run --daily --source riss --dry-run",
         "renewal": UNKNOWN,
         "cautions": (
-            "승인 전에는 직접 크롤링하지 말고 LINK_ONLY 로 유지하십시오. "
+            "RISS API 센터가 공개하는 API 는 상호대차(ILL)·E-DDS 신청, Rinfo 통계, "
+            "FRIC 소장자원 검색용이며 일반 학술 서지 검색 API 는 확인되지 않았습니다. "
+            "따라서 이 시스템은 RISS 를 직접 조회하지 않고 LINK_ONLY 로만 사용합니다. "
             "화면상 '원문있음' 표시가 자동 다운로드 권한을 의미하지 않습니다."
         ),
     },
     "scienceon": {
         "purpose_example": "국내외 학술논문·연구보고서 메타데이터 및 오픈액세스 원문 위치 탐색",
         "account_required": "예 (KISTI 통합회원)",
-        "menu_path": "ScienceON → API 서비스 → 활용 신청",
+        "menu_path": (
+            "ScienceON → OpenAPI(por/oapi/openApi.do) 신청 → API Gateway"
+            "(apigateway/api/main/mainForm.do)에서 client_id 와 ACCESS_TOKEN 확인"
+        ),
         "approval": UNKNOWN,
         "pricing": UNKNOWN,
         "scopes": "API 별 이용조건 확인 필요",
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source scienceon --dry-run",
-        "renewal": UNKNOWN,
-        "cautions": "AccessON 오픈액세스 검색은 별도 이용조건이 적용될 수 있습니다.",
+        "renewal": "토큰 만료일이 있으므로 API Gateway 에서 갱신 상태를 확인하십시오.",
+        "cautions": (
+            "인증에 client_id 와 token(ACCESS_TOKEN) 두 값이 모두 필요합니다 "
+            "(SCIENCEON_CLIENT_ID, SCIENCEON_API_KEY). 요청 파라미터는 "
+            "version/action/target/searchQuery/curPage/rowCount 이며 searchQuery 는 JSON 문자열입니다. "
+            "AccessON 오픈액세스 검색은 별도 이용조건이 적용될 수 있습니다."
+        ),
     },
     "nkis": {
         "purpose_example": "정부출연연구기관 연구보고서의 정기 수집 및 내부 리서치 아카이브 구축",
@@ -85,14 +103,21 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
     "prism": {
         "purpose_example": "중앙·지방정부 정책연구용역 보고서의 정기 수집",
         "account_required": "예 (공공데이터포털 회원가입)",
-        "menu_path": "공공데이터포털 → 해당 오픈API 검색 → 활용신청",
+        "menu_path": (
+            "공공데이터포털 → '행정안전부_정책연구 과제정보'(15080254) → 활용신청. "
+            "오퍼레이션: getResearchList_v2 / getResearchDetail_v2 / pnnMetaData_v2"
+        ),
         "approval": "자동승인 또는 기관 검토 (API 별 상이)",
         "pricing": "공공데이터포털 기준 무료(트래픽 한도 있음)",
         "scopes": "해당 없음",
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source prism --dry-run",
         "renewal": "공공데이터포털 마이페이지에서 활용기간 연장 신청",
-        "cautions": "일반 인증키(Encoding/Decoding) 구분에 주의하십시오.",
+        "cautions": (
+            "일반 인증키가 Encoding/Decoding 두 형태로 발급되므로 구분해서 사용하십시오. "
+            "응답 필드명은 데이터셋 상세페이지의 '출력결과' 표를 보고 "
+            "config/sources.yaml 의 field_map 을 맞춰야 합니다."
+        ),
     },
     "law_go_kr": {
         "purpose_example": "군사법·국방 관련 법령·행정규칙·판례의 신규 제정 및 개정 추적",
@@ -104,7 +129,12 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source law_go_kr --dry-run",
         "renewal": UNKNOWN,
-        "cautions": "OC 는 API Key 가 아니라 사용자 식별자이지만 동일하게 .env 로 관리합니다.",
+        "cautions": (
+            "OC 는 API Key 가 아니라 사용자 식별자이지만 동일하게 .env 로 관리합니다. "
+            "요청변수는 OC/target/type/query/display/page 이며, 판례 목록은 prncYd(선고일자 범위)를 "
+            "지원합니다. target 코드: law(법령) admrul(행정규칙) prec(판례) expc(법령해석례) ordin(자치법규). "
+            "동일 데이터가 공공데이터포털에도 등재되어 있습니다(예: 법제처_판례 목록 조회 15059269)."
+        ),
     },
     "crossref": {
         "purpose_example": "DOI 메타데이터 정규화 및 중복 판별 (연구 목적)",
@@ -120,15 +150,22 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
     },
     "openalex": {
         "purpose_example": "국제법·법률AI 분야 영문 연구 동향 탐색",
-        "account_required": "아니오 (구현 시점 정책 확인 필요)",
-        "menu_path": "별도 신청 없이 사용 가능. 연락 이메일 제공 권장.",
-        "approval": "불필요",
-        "pricing": UNKNOWN,
+        "account_required": "예 (API Key 발급 필요)",
+        "menu_path": "openalex.org 로그인 → Settings → API 에서 무료 키 발급",
+        "approval": "불필요 (즉시 발급)",
+        "pricing": (
+            "무료 키에 일일 예산이 배정되고 초과분은 사용량 기반 과금. "
+            "키가 없으면 시험용 크레딧 100건 소진 후 409 반환"
+        ),
         "scopes": "해당 없음",
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source openalex --dry-run",
-        "renewal": "해당 없음",
-        "cautions": "API Key·무료 한도 정책이 변경될 수 있으므로 구현 직전 공식 문서를 재확인하십시오.",
+        "renewal": "openalex.org/settings/api 에서 키 재발급·폐기",
+        "cautions": (
+            "2026-02-13 부터 모든 요청에 API Key 가 필수가 되었고 polite pool 과 mailto 파라미터는 "
+            "폐지되었습니다. 사용량 기반 과금이므로 rate_limit_rps 를 낮게 유지하고 "
+            "max_items_per_source 로 호출량을 통제하십시오."
+        ),
     },
     "semantic_scholar": {
         "purpose_example": "중요 논문의 인용관계 탐색 및 최신 영문 논문 보강",
@@ -140,7 +177,11 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source semantic_scholar --dry-run",
         "renewal": UNKNOWN,
-        "cautions": "키 없이 사용하면 429 가 잦습니다. rate_limit_rps 를 낮게 유지하십시오.",
+        "cautions": (
+            "키 없는 요청은 모든 미인증 사용자가 하나의 공유 키를 나눠 쓰므로 429 가 잦습니다. "
+            "개인 키를 받으면 전 엔드포인트에서 초당 1회가 보장됩니다. "
+            "대량 조회에는 /graph/v1/paper/search/bulk 를 사용하십시오."
+        ),
     },
     "core": {
         "purpose_example": "오픈액세스 논문 원문 확보",
@@ -152,7 +193,10 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source core --dry-run",
         "renewal": UNKNOWN,
-        "cautions": "원문 이용조건은 개별 논문 라이선스를 따릅니다.",
+        "cautions": (
+            "v3 는 쿼리 파라미터가 아니라 Authorization: Bearer 헤더로 인증합니다. "
+            "원문 이용조건은 개별 논문 라이선스를 따릅니다."
+        ),
     },
     "unpaywall": {
         "purpose_example": "DOI 기반 합법적 오픈액세스 원문 위치 확인",
@@ -176,7 +220,10 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source doaj --dry-run",
         "renewal": "해당 없음",
-        "cautions": "API 버전 경로가 변경될 수 있으므로 endpoint 를 주기적으로 확인하십시오.",
+        "cautions": (
+            "현재 버전은 v4 이며 /api 와 /api/v4 양쪽에서 제공됩니다(2024-06 전환). "
+            "pageSize 최대값은 100 입니다."
+        ),
     },
     "arxiv": {
         "purpose_example": "AI·법률AI 분야 프리프린트 수집",
@@ -267,6 +314,15 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 """
 
 
+def _method_label(verified_method: str) -> str:
+    """무엇을 근거로 확정했는지 (§18.4 감사가능성)."""
+    return {
+        "official_doc": "공식 문서 직접 열람",
+        "web_search": "공식 문서 검색결과 기준",
+        "none": "미확인",
+    }.get(verified_method or "none", verified_method)
+
+
 def _auth_label(auth_type: AuthType) -> str:
     return {
         AuthType.NONE: "불필요",
@@ -289,6 +345,11 @@ def _source_section(source: Any, notes: dict[str, Any], today: str) -> str:
             f"사전 발급 필요: {'예' if method.credential_required else '아니오'} / "
             f"환경변수: {env} / 확인상태: `{method.verification_status}`"
         )
+        if method.verified_source:
+            methods.append(
+                f"  - 확인근거: {method.verified_source} "
+                f"({method.verified_at or '-'}, {_method_label(method.verified_method)})"
+            )
     lines.extend(methods)
     lines.append("")
 
@@ -386,7 +447,15 @@ def build_markdown(settings: Settings) -> str:
 API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제로 연결하기 직전에 공식 문서를 다시 확인**하십시오.
 블로그·카페·개인 튜토리얼은 보조자료로만 사용하고, 발급절차·쿼터·가격·권한은 공식 문서를 기준으로 판단합니다.
 
-`확인상태: PENDING_VERIFICATION` 으로 표시된 항목은 아직 공식 문서로 확정되지 않은 부분이며,
+각 항목의 **확인상태**와 **확인근거**는 다음을 뜻합니다.
+
+| 값 | 의미 |
+| --- | --- |
+| `VERIFIED` | 공식 문서로 엔드포인트·인증방식을 확정함 (확인근거 URL 기재) |
+| `PENDING_VERIFICATION` | 아직 확정되지 않음 — 운영 전 공식 문서 확인 필요 |
+| 확인근거 · 공식 문서 직접 열람 | 공식 페이지를 직접 열어 확인 |
+| 확인근거 · 공식 문서 검색결과 기준 | 공식 문서의 검색 결과로 확인 (원문 재확인 권장) |
+
 **엔드포인트가 비어 있으면 시스템은 해당 소스의 자동수집을 시도하지 않고 건너뜁니다.**
 
 ### 발급 절차 요약
@@ -401,8 +470,8 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ## 1. 인증정보가 필요한 소스 요약
 
-| 소스 | 인증방식 | 환경변수 | 승인 필요 | 확인상태 |
-| --- | --- | --- | --- | --- |
+| 소스 | 인증방식 | 환경변수 | 승인 필요 | 확인상태 | 확인근거 |
+| --- | --- | --- | --- | --- | --- |
 """
 
     summary_rows = []
@@ -414,7 +483,8 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
                 f"| {source.name} (`{source.source_id}`) | {method.type} / {_auth_label(method.auth_type)} "
                 f"| `{method.credential_env_var or '-'}` "
                 f"| {'예' if method.auth_type == AuthType.INSTITUTION_APPROVAL else '신청 필요'} "
-                f"| `{method.verification_status}` |"
+                f"| `{method.verification_status}` "
+                f"| {method.verified_source or '-'} |"
             )
 
     keyless_rows = "\n".join(

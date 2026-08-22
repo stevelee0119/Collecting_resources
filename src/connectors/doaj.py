@@ -33,6 +33,8 @@ class DoajConnector(SourceConnector):
 
     def discover(self, since: date, until: date, queries: Sequence[Query]) -> Iterator[RawItem]:
         method = self.require_method("OPEN_API")
+        # 공식 문서상 pageSize 상한은 100 입니다.
+        page_size = min(self.PAGE_SIZE, int(getattr(self.config, "max_page_size", 100)))
         seen: set[str] = set()
         emitted = 0
 
@@ -45,7 +47,7 @@ class DoajConnector(SourceConnector):
                 f"last_updated:[{since.isoformat()} TO {until.isoformat()}]"
             )
             url = f"{method.endpoint.rstrip('/')}/{quote(search, safe='')}"
-            params = {"pageSize": self.PAGE_SIZE, "sort": "last_updated:desc"}
+            params = {"pageSize": page_size, "sort": "last_updated:desc"}
             if api_key := self.secret_for(method):
                 params["api_key"] = api_key
 
