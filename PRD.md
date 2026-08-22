@@ -26,29 +26,34 @@
   - **분야별 확장:** 교육부 (`moe.go.kr`), 고용노동부 (`moel.go.kr`), 국가인권위원회 (`humanrights.go.kr`)
   - **오픈액세스:** arXiv (`arxiv.org`), SSRN 등
 
-### 3.2. 3단계 접속 및 링크 유효성 검증 엔진 (Validator)
-- **1단계 접속 확인:** HTTP Status 200/302 응답 및 정상 접속 확인 (URL 환각 절대 금지).
-- **2단계 자료 일치 확인:** 문서 타이틀, 헤더 및 발간 연월 매칭.
+### 3.2. 자료 탐색 방식 (Discovery Engine)
+- **검색 기반 전수 탐색:** 기관별 직접 크롤러 대신, 필수 기관 도메인마다 `site:{도메인} filetype:pdf OR filetype:hwp OR filetype:hwpx` 형태의 검색 쿼리를 자동 생성하여 검색엔진(DuckDuckGo HTML 검색) 결과에서 첨부파일·게시글 링크를 수집.
+- **오픈액세스 전용 API 연동:** arXiv는 공식 Atom API(`export.arxiv.org/api/query`)를 통해 최신 발행 논문의 PDF 영구 링크를 직접 조회.
+- **중복 선제 차단:** 검색 결과로 얻은 URL은 검증 이전 단계에서 SQLite 이력(SHA256 해시)과 우선 대조하여 이미 수집된 링크는 재검증 없이 스킵.
+
+### 3.3. 3단계 접속 및 링크 유효성 검증 엔진 (Validator)
+- **1단계 접속 확인:** HTTP 정상 응답(리다이렉트 자동 추적 포함, 최종 Status 200) 확인 (URL 환각 절대 금지).
+- **2단계 자료 일치 확인:** 문서 타이틀, 헤더 및 발간 연월 매칭. 로그인/결제 요구 문구(Paywall 키워드) 및 세션ID·일회성 파라미터(jsessionid, token= 등) 포함 링크는 제외.
 - **3단계 무료 다운로드 확인:** 로그인 또는 유료 결제 벽(Paywall) 없는 무료 다운로드 확인.
 - **A/B 그룹 분기:**
-  - **A그룹:** 영구 직접 PDF 링크 (arXiv, DOI, RAND 등)
+  - **A그룹:** 영구 직접 PDF 링크 (arXiv, DOI, RAND 등 사전 등록 도메인 또는 `Content-Type: application/pdf` 응답)
   - **B그룹:** 공식 게시글 Landing Page URL (공공기관 게시판, RISS 등 - 세션 ID 포함 일회성 파라미터 링크 금지)
 
-### 3.3. 듀얼 운영 모드 및 일자별 파일 저장 (Storage)
+### 3.4. 듀얼 운영 모드 및 일자별 파일 저장 (Storage)
 - **1안 모드 (기본):** 검증된 PDF를 `downloads/YYYY-MM-DD/` 일자별 폴더로 자동 다운로드 저장 후 수집 이력 메일 발송.
 - **2안 모드:** 파일 다운로드 없이 3단계 검증된 원문 게시글/다운로드 링크 정리 메일 발송.
 
-### 3.4. 이력 관리 (CSV & Excel 다중 시트)
+### 3.5. 이력 관리 (CSV & Excel 다중 시트)
 - **`list_download_resources.csv`:** 다운로드 항목 상시 누적 저장 (UTF-8-SIG 적용).
 - **`list_download_resources.xlsx`:**
   - `통합 목록` 시트: 전체 누적 데이터 저장.
   - `YYYY-MM 목록` 시트: 발간/수집 일자(예: `2026-01`, `2026-07`, `2026-08`)에 맞춰 월별 시트 자동 생성 및 분리 탭 관리.
 
-### 3.5. 모바일 최적화 메일 발송 (Email Dispatcher)
+### 3.6. 모바일 최적화 메일 발송 (Email Dispatcher)
 - 삼성 갤럭시 폴드7 및 모바일 디스플레이 환경에서 가로 스크롤 없이 스캔 가능한 세로형 Card UI HTML 메일 생성.
 - SMTP(Gmail App Password 등)를 통한 자동 발송.
 
-### 3.6. 정기 스케줄링 (Scheduler)
+### 3.7. 정기 스케줄링 (Scheduler)
 - 자동화 주기: **매월 1일 오전 09:00** 실행.
 - Windows Task Scheduler 배치 등록 (`scripts/setup_scheduler.bat`) 및 파이썬 데몬 스케줄러 지원.
 
