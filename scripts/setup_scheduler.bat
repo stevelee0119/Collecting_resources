@@ -1,26 +1,45 @@
 @echo off
 chcp 65001 > nul
-echo =========================================================
-echo  웹 크롤링 정기 수집 프로그램 - 윈도우 작업 스케줄러 등록
-echo =========================================================
+REM =============================================================================
+REM DL-RCIS Windows 작업 스케줄러 등록 (PRD v2.1 16)
+REM   - 매일 07:30  일일 증분 수집
+REM   - 매월 1일 05:00 월간 정합성 점검
+REM 관리자 권한으로 실행하십시오.
+REM =============================================================================
 
-set TASK_NAME=MonthlyResearchCrawler
-set SCRIPT_PATH=%~dp0..\main.py
-set PYTHON_PATH=python
+setlocal
+set "PROJECT_DIR=%~dp0.."
+pushd "%PROJECT_DIR%"
+set "PROJECT_DIR=%CD%"
+popd
 
-echo 등록할 작업 이름: %TASK_NAME%
-echo 실행할 파이썬 파일: %SCRIPT_PATH%
-echo 실행 주기: 매월 1일 오전 09:00
+REM 가상환경이 있으면 그 파이썬을 사용합니다.
+set "PYTHON_EXE=python"
+if exist "%PROJECT_DIR%\.venv\Scripts\python.exe" set "PYTHON_EXE=%PROJECT_DIR%\.venv\Scripts\python.exe"
 
-schtasks /create /tn "%TASK_NAME%" /tr "%PYTHON_PATH% \"%SCRIPT_PATH%\" --now" /sc monthly /d 1 /st 09:00 /f
+echo.
+echo  프로젝트 경로 : %PROJECT_DIR%
+echo  파이썬        : %PYTHON_EXE%
+echo.
 
-if %ERRORLEVEL% EQU 0 (
-    echo.
-    echo [성공] 윈도우 작업 스케줄러에 성공적으로 등록되었습니다.
-    echo 매월 1일 오전 09:00에 수집 프로그램이 백그라운드에서 자동 실행됩니다.
-) else (
-    echo.
-    echo [오류] 작업 스케줄러 등록 실패. 배치 파일을 '관리자 권한으로 실행'해 주세요.
-)
+schtasks /Create /F /TN "DL-RCIS 일일 증분 수집" ^
+  /TR "\"%PYTHON_EXE%\" \"%PROJECT_DIR%\main.py\" run --daily" ^
+  /SC DAILY /ST 07:30 /RL HIGHEST
+if errorlevel 1 goto :failed
 
-pause
+schtasks /Create /F /TN "DL-RCIS 월간 정합성 점검" ^
+  /TR "\"%PYTHON_EXE%\" \"%PROJECT_DIR%\main.py\" run --reconcile" ^
+  /SC MONTHLY /D 1 /ST 05:00 /RL HIGHEST
+if errorlevel 1 goto :failed
+
+echo.
+echo  [완료] 작업 스케줄러에 등록되었습니다.
+echo         확인: schtasks /Query /TN "DL-RCIS 일일 증분 수집"
+echo         해제: schtasks /Delete /TN "DL-RCIS 일일 증분 수집" /F
+echo.
+goto :eof
+
+:failed
+echo.
+echo  [실패] 등록에 실패했습니다. 관리자 권한으로 다시 실행하십시오.
+exit /b 1

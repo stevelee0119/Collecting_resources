@@ -1,19 +1,56 @@
-# 파이썬 가상환경 및 캐시
-.venv/
-venv/
-__pycache__/
-*.pyc
+# --- 비밀정보 (절대 커밋 금지) ------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+client_secret*.json
+token*.json
+credentials.json
 
-# 수집된 엑셀/CSV 및 다운로드 파일 (대용량 및 이력)
-downloads/
-database.db
+# --- 수집 데이터 -------------------------------------------------------------
+data/library/**
+!data/library/.gitkeep
+data/staging/**
+!data/staging/.gitkeep
+data/manifests/**
+!data/manifests/.gitkeep
+data/metadata/**
+!data/metadata/.gitkeep
+data/summaries/**
+!data/summaries/.gitkeep
+data/cache/**
+!data/cache/.gitkeep
+data/quarantine/**
+!data/quarantine/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+*.sqlite3
+
+# --- 로그 -------------------------------------------------------------------
+logs/*
+!logs/.gitkeep
+
+# --- 산출물 -----------------------------------------------------------------
 list_download_resources.csv
 list_download_resources.xlsx
+docs/API_발급_연동_가이드.xlsx
 
-# 민감한 계정 정보 (비밀번호 제외)
-# config.yaml (필요 시 config.yaml.example 사용)
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
 
-# IDE 설정
-.vscode/
+# --- OS / IDE ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
 .idea/
-*.log
+.vscode/

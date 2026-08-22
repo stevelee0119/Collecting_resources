@@ -1,0 +1,315 @@
+"""MVP 수용기준 검증 (PRD v2.1 §23.1).
+
+각 체크리스트 항목이 실제로 충족되는지 확인합니다.
+"""
+
+from __future__ import annotations
+
+import re
+
+import pytest
+
+from src.config_loader import load_search_terms, load_sources, load_topics
+from src.connectors import CONNECTOR_REGISTRY
+from src.discovery.query_expander import QueryExpander
+from src.models import DownloadPolicy, SourceMode
+
+from .conftest import CONFIG_DIR, PROJECT_ROOT
+
+
+@pytest.fixture(scope="module")
+def registry():
+    return load_sources(CONFIG_DIR / "sources.yaml")
+
+
+@pytest.fixture(scope="module")
+def dictionary():
+    return load_search_terms(CONFIG_DIR / "search_terms.yaml")
+
+
+# ---------------------------------------------------------------------------
+# 소스 연동
+# ---------------------------------------------------------------------------
+
+def test_kci_registered_with_oai_and_open_api(registry):
+    """[ ] KCI Open API/OAI-PMH 수집 가능"""
+    kci = registry.get("kci")
+    assert kci is not None and kci.enabled
+    assert kci.method("OAI_PMH") is not None
+    assert kci.method("OPEN_API") is not None
+    # OAI-PMH 는 키 없이 사용할 수 있는 경로로 우선 검토되어야 합니다.
+    assert kci.method("OAI_PMH").credential_required is False
+    assert CONNECTOR_REGISTRY[kci.connector].__name__ == "KciConnector"
+
+
+def test_nkis_registered(registry):
+    """[ ] NKIS Open API 수집 가능"""
+    nkis = registry.get("nkis")
+    assert nkis is not None and nkis.enabled
+    assert nkis.method("OPEN_API") is not None
+    assert nkis.method("OPEN_API").credential_env_var == "NKIS_API_KEY"
+
+
+def test_law_openapi_registered(registry):
+    """[ ] 국가법령정보 공동활용 Open API 수집 가능"""
+    law = registry.get("law_go_kr")
+    assert law is not None and law.enabled
+    assert law.method("OPEN_API") is not None
+    # 공포일·시행일·개정일 구분을 위해 여러 target 을 조회합니다.
+    assert set(getattr(law, "law_targets", [])) >= {"law", "prec"}
+
+
+def test_at_least_two_of_crossref_openalex_unpaywall(registry):
+    """[ ] Crossref/OpenAlex/Unpaywall 중 최소 2개 연동"""
+    enabled = [
+        s for s in ("crossref", "openalex", "unpaywall")
+        if (source := registry.get(s)) and source.enabled
+    ]
+    assert len(enabled) >= 2, f"연동된 소스: {enabled}"
+    for source_id in enabled:
+        assert CONNECTOR_REGISTRY[registry.get(source_id).connector]
+
+
+def test_ssrn_discovered_via_external_metadata_and_link_only(registry):
+    """[ ] SSRN 논문을 외부 학술 메타데이터로 발견하고 공식 Landing Page 연결 가능"""
+    ssrn = registry.get("ssrn")
+    assert ssrn is not None and ssrn.enabled
+    assert ssrn.download_policy == DownloadPolicy.LINK_ONLY
+    assert SourceMode.LINK_ONLY in ssrn.mode
+
+    discovery_via = set(getattr(ssrn, "discovery_via", []))
+    assert discovery_via, "SSRN 은 다른 소스를 통해 발견되어야 합니다."
+    assert discovery_via <= {s.source_id for s in registry.sources}
+
+
+def test_riss_switches_between_api_and_link_only(registry):
+    """[ ] RISS 는 Open API 승인 여부에 따라 API/Link-only 로 동작 가능"""
+    riss = registry.get("riss")
+    assert riss is not None
+    assert SourceMode.QUERY in riss.mode and SourceMode.LINK_ONLY in riss.mode
+    # 승인 전 기본값은 link_only 여야 합니다.
+    assert riss.download_policy == DownloadPolicy.LINK_ONLY
+
+
+# ---------------------------------------------------------------------------
+# 검색어
+# ---------------------------------------------------------------------------
+
+def test_required_keywords_included(dictionary):
+    """[ ] 국내 검색어 사전에 §3.3 필수 키워드가 포함됨"""
+    assert dictionary.missing_required() == []
+
+
+def test_english_expansion_for_en_sources(registry, dictionary):
+    """[ ] query_language=en 소스에서 한국어를 검수된 영문 학술용어로 변환·확장"""
+    en_sources = [s for s in registry.enabled() if s.query_language == "en"]
+    assert en_sources, "영문 소스가 등록되어 있지 않습니다."
+
+    expander = QueryExpander(dictionary)
+    queries = expander.build_queries(language="en", scope="international")
+    assert queries
+    for query in queries:
+        assert not re.search(r"[가-힣]", query.query_string)
+        assert query.expanded_terms
+
+
+def test_query_provenance_is_recordable(dictionary):
+    """[ ] 검색에 실제 사용된 번역·확장 Query 와 사전 버전을 DB/Manifest 에 기록"""
+    from src.storage.manifest import MANIFEST_COLUMNS
+
+    expander = QueryExpander(dictionary)
+    query = expander.build_queries(language="en", scope="international")[0]
+    assert query.dictionary_version and query.expanded_terms
+
+    for column in ("발견검색어", "검색어사전버전", "확장검색어"):
+        assert column in MANIFEST_COLUMNS
+
+    from src.database.schema import DDL_STATEMENTS
+
+    resources_ddl = next(d for d in DDL_STATEMENTS if "CREATE TABLE IF NOT EXISTS resources" in d)
+    for column in (
+        "query_original", "query_language", "query_terms_expanded",
+        "query_dictionary_version", "discovered_by_query",
+    ):
+        assert column in resources_ddl
+
+
+# ---------------------------------------------------------------------------
+# 저장 구조
+# ---------------------------------------------------------------------------
+
+def test_yymmdd_prefix_rule_applied():
+    """[ ] `YYMMDD_` 접두사 파일명 규칙 100% 적용"""
+    from datetime import date
+
+    from src.storage import build_filename
+
+    for source_id, title in (
+        ("KCI", "군사재판절차 개선방안"),
+        ("SSRN", "AI and Military Legal Education"),
+        ("NKIS", "공공부문 AI 법제연구"),
+    ):
+        name = build_filename(
+            downloaded_on=date(2026, 8, 22), source_id=source_id, title=title, extension=".pdf"
+        )
+        assert re.match(r"^\d{6}_", name), name
+        assert name.startswith("260822_")
+
+
+def test_manifest_and_topic_library_coexist():
+    """[ ] 일자별 Manifest 와 주제별 최종저장 구조 동시 구현"""
+    from src.storage import Library, ManifestWriter
+
+    assert Library is not None and ManifestWriter is not None
+
+    topics = load_topics(CONFIG_DIR / "topics.yaml")
+    # §9.2 가 요구하는 주제 폴더가 모두 정의되어야 합니다.
+    required = {
+        "01_군사법_군사사법", "02_군인사_복무_징계", "03_국방정책_행정법",
+        "04_국방계약_조달법제", "05_형사_수사_사법", "06_헌법_인권",
+        "07_국제법_작전법_국제인도법", "08_AI_법률AI_디지털법",
+        "09_법무교육_교육방법론", "10_비교법_해외법제",
+        "90_복수주제", "99_미분류_검토필요",
+    }
+    assert required <= set(topics.ids())
+
+
+def test_dedup_uses_doi_and_file_hash():
+    """[ ] DOI/파일 해시 기반 중복차단"""
+    import inspect
+
+    from src.dedup import Deduplicator
+
+    metadata_src = inspect.getsource(Deduplicator.check_metadata)
+    content_src = inspect.getsource(Deduplicator.check_content)
+
+    assert "find_by_doi" in metadata_src
+    assert "find_by_file_hash" in content_src
+    assert "find_by_text_hash" in content_src
+
+
+# ---------------------------------------------------------------------------
+# 알림·추적
+# ---------------------------------------------------------------------------
+
+def test_daily_briefing_is_configured():
+    """[ ] 매일 신규자료 요약 이메일 발송"""
+    from src.config_loader import load_app_config
+
+    app = load_app_config(CONFIG_DIR / "config.yaml")
+    assert app.get("scheduler.daily_incremental.enabled") is True
+    assert app.get("scheduler.timezone") == "Asia/Seoul"
+    assert app.get("notification.channel") == "email"
+
+
+def test_provenance_fields_exist():
+    """[ ] 출처·원문·라이선스·요약근거 추적 가능"""
+    from src.models import Resource
+
+    fields = set(Resource.model_fields)
+    for name in (
+        "source_id", "landing_url", "download_url", "oa_url",
+        "license", "license_unknown", "summary_basis", "summary_generated_at",
+        "discovered_at", "downloaded_at", "file_sha256", "text_sha256",
+        "version_of", "score_breakdown",
+    ):
+        assert name in fields, f"누락된 필드: {name}"
+
+
+# ---------------------------------------------------------------------------
+# API 가이드 산출물 (§5.1)
+# ---------------------------------------------------------------------------
+
+def test_api_guide_generated_and_lists_every_credentialed_source(tmp_path, registry):
+    """[ ] 인증이 필요한 모든 Connector 에 대해 가이드 생성 및 확인일 기록"""
+    from scripts.generate_api_guide import build_markdown
+    from src.config_loader import Settings, load_app_config
+
+    settings = Settings(
+        app=load_app_config(CONFIG_DIR / "config.yaml"),
+        sources=registry,
+        topics=load_topics(CONFIG_DIR / "topics.yaml"),
+        search_terms=load_search_terms(CONFIG_DIR / "search_terms.yaml"),
+    )
+    markdown = build_markdown(settings)
+
+    for source in registry.sources:
+        for method in source.access_methods:
+            if method.credential_required and method.credential_env_var:
+                assert method.credential_env_var in markdown, (
+                    f"{source.source_id} 의 {method.credential_env_var} 가 가이드에 없습니다."
+                )
+
+    # 16개 필수 기재항목이 표에 존재해야 합니다.
+    for item in (
+        "1. 서비스/기관명", "4. 공식 발급/신청 페이지", "7. 서비스 목적 예시",
+        "9. 무료/유료 및 쿼터", "10. OAuth Scope/권한", "11. Redirect URI 필요 여부",
+        "12. 환경변수명", "13. 동작 확인 방법", "14. 키 만료·갱신·회수",
+        "16. 공식 문서 최종 확인일",
+    ):
+        assert item in markdown, f"필수 기재항목 누락: {item}"
+
+    # Gmail 인증 절차도 포함되어야 합니다.
+    assert "Gmail API" in markdown
+    assert "gmail.send" in markdown
+
+
+SECRET_PATTERNS = [
+    re.compile(r"sk-[A-Za-z0-9_\-]{16,}"),          # 일반 API Key 형태
+    re.compile(r"AIza[0-9A-Za-z_\-]{30,}"),          # Google API Key
+    re.compile(r"ya29\.[0-9A-Za-z_\-]+"),            # Google OAuth 토큰
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+]
+
+
+def test_api_guide_contains_no_real_secrets():
+    """[ ] API 가이드와 .env.example 에 실제 비밀키/토큰이 포함되지 않음"""
+    guide = PROJECT_ROOT / "docs" / "API_발급_연동_가이드.md"
+    if not guide.exists():
+        pytest.skip("가이드가 아직 생성되지 않았습니다. python main.py api-guide 를 실행하세요.")
+
+    content = guide.read_text(encoding="utf-8")
+    for pattern in SECRET_PATTERNS:
+        assert not pattern.search(content), f"가이드에 비밀값으로 보이는 문자열이 있습니다: {pattern.pattern}"
+
+
+def test_env_example_has_no_values():
+    """`.env.example` 에는 변수명과 설명만 있어야 합니다 (§5.1 보안 원칙)."""
+    example = PROJECT_ROOT / ".env.example"
+    assert example.exists()
+
+    content = example.read_text(encoding="utf-8")
+    for pattern in SECRET_PATTERNS:
+        assert not pattern.search(content)
+
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        assert "=" in line, line
+        _, _, value = line.partition("=")
+        assert value.strip() == "", f"실제 값이 들어 있습니다: {line}"
+
+
+def test_env_is_gitignored():
+    gitignore = (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8")
+    assert ".env" in gitignore
+    assert "!.env.example" in gitignore
+
+
+def test_no_search_engine_html_scraping():
+    """§4.1 — 검색엔진 HTML 결과 스크래핑을 핵심 수집수단으로 쓰지 않습니다."""
+    banned = ("duckduckgo", "google.com/search", "bing.com/search", "html.duckduckgo")
+    for path in (PROJECT_ROOT / "src").rglob("*.py"):
+        content = path.read_text(encoding="utf-8").lower()
+        for needle in banned:
+            assert needle not in content, f"{path} 에 검색엔진 스크래핑 흔적이 있습니다: {needle}"
+
+
+def test_no_paywall_bypass_helpers():
+    """§7.3 — 로그인/CAPTCHA/Paywall 우회 기능이 없어야 합니다."""
+    banned = ("captcha_solve", "bypass_paywall", "solve_captcha", "anticaptcha", "2captcha")
+    for path in (PROJECT_ROOT / "src").rglob("*.py"):
+        content = path.read_text(encoding="utf-8").lower()
+        for needle in banned:
+            assert needle not in content, f"{path} 에 우회 기능이 있습니다: {needle}"

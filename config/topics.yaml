@@ -1,0 +1,106 @@
+# =============================================================================
+# 주제 분류 체계 (PRD v2.1 §3.1)
+# folder 는 data/library/ 하위 실제 폴더명이며 topic_id 와 동일하게 유지합니다.
+# keywords 는 규칙기반 1차 분류에 사용되고, weight 가 클수록 해당 주제 신호가 강합니다.
+# =============================================================================
+
+version: "2026.08.22-1"
+
+topics:
+  - topic_id: "01_군사법_군사사법"
+    name: "군사법·군사사법"
+    description: "군사재판, 군검찰, 군사경찰, 군형사절차, 징계절차"
+    trust_boost: 0
+    keywords_strong: ["군사법원", "군검찰", "군검사", "군사경찰", "군사법", "군사재판", "군형사", "보통군사법원", "고등군사법원", "군사법원법"]
+    keywords_weak: ["군사법제", "군 사법", "군수사", "military justice", "court-martial", "military court", "military prosecutor"]
+
+  - topic_id: "02_군인사_복무_징계"
+    name: "군인사·복무·징계"
+    description: "인사, 보직, 진급, 전역, 복무, 징계, 소청"
+    trust_boost: 0
+    keywords_strong: ["군인사법", "군인복무", "징계처분", "전역처분", "진급", "소청심사", "군인의 지위 및 복무"]
+    keywords_weak: ["보직", "인사관리", "복무규율", "military personnel", "military discipline"]
+
+  - topic_id: "03_국방정책_행정법"
+    name: "국방정책·행정법"
+    description: "국방행정, 조직, 규제, 국가배상, 행정쟁송"
+    trust_boost: 0
+    keywords_strong: ["국방정책", "국방행정", "국가배상", "행정쟁송", "행정심판", "행정소송", "통합방위법"]
+    keywords_weak: ["국방개혁", "병역", "행정규제", "defense policy", "administrative law"]
+
+  - topic_id: "04_국방계약_조달법제"
+    name: "국방계약·조달법제"
+    description: "국가계약, 국방계약, 방산 관련 법제·정책·분쟁"
+    trust_boost: 0
+    keywords_strong: ["방위사업법", "방위사업", "국방조달", "국가계약법", "방산비리", "국방계약", "부정당업자"]
+    keywords_weak: ["조달", "입찰", "계약분쟁", "defense acquisition", "defense procurement", "public procurement"]
+
+  - topic_id: "05_형사_수사_사법"
+    name: "형사·수사·사법"
+    description: "형법, 형사소송, 수사절차, 증거법, 사법제도"
+    trust_boost: 0
+    keywords_strong: ["형사소송법", "위법수집증거", "위법수집증거배제법칙", "증거능력", "디지털포렌식", "포렌식", "사법제도", "수사절차", "압수수색"]
+    keywords_weak: ["형법", "판례", "판결", "공소", "기소", "criminal procedure", "digital forensics", "exclusionary rule", "admissibility of evidence"]
+
+  - topic_id: "06_헌법_인권"
+    name: "헌법·인권"
+    description: "기본권, 군인권, 국가인권위원회, 인권정책"
+    trust_boost: 0
+    keywords_strong: ["국가인권위원회", "군인권", "기본권", "헌법재판소", "인권침해", "위헌"]
+    keywords_weak: ["평등권", "표현의 자유", "human rights", "constitutional law", "fundamental rights"]
+
+  - topic_id: "07_국제법_작전법_국제인도법"
+    name: "국제법·작전법·국제인도법"
+    description: "국제법, 국제인도법, 무력분쟁법의 법률·정책 연구"
+    trust_boost: 0
+    keywords_strong: ["작전법", "국제인도법", "무력분쟁법", "제네바협약", "교전규칙", "법률전", "국제법", "해양법"]
+    keywords_weak: ["UNCLOS", "operational law", "law of armed conflict", "international humanitarian law", "geneva conventions", "law of the sea", "lawfare", "rules of engagement", "jus ad bellum", "jus in bello"]
+
+  - topic_id: "08_AI_법률AI_디지털법"
+    name: "AI·법률AI·디지털법"
+    description: "법률AI, AI 거버넌스, 공공부문 AI, 데이터·알고리즘 규율"
+    trust_boost: 0
+    keywords_strong: ["법률AI", "인공지능", "AI 거버넌스", "알고리즘 규제", "개인정보보호법", "데이터 3법", "자율무기"]
+    keywords_weak: ["머신러닝", "생성형 AI", "legal AI", "artificial intelligence", "AI governance", "algorithmic regulation", "autonomous weapons", "LLM"]
+
+  - topic_id: "09_법무교육_교육방법론"
+    name: "법무교육·교육방법론"
+    description: "법학교육, 군 교육, 성인교육, AI 리터러시"
+    trust_boost: 0
+    keywords_strong: ["법학교육", "법무교육", "군 교육", "교육방법론", "AI 리터러시"]
+    keywords_weak: ["성인교육", "교수법", "커리큘럼", "legal education", "military education", "pedagogy", "AI literacy"]
+
+  - topic_id: "10_비교법_해외법제"
+    name: "비교법·해외법제"
+    description: "해외 법제 비교연구"
+    trust_boost: 0
+    keywords_strong: ["비교법", "해외법제", "외국 입법례", "입법례 비교"]
+    keywords_weak: ["comparative law", "foreign legislation", "comparative legal study"]
+
+  - topic_id: "90_복수주제"
+    name: "복수주제"
+    description: "둘 이상의 주제에 동등하게 해당"
+    trust_boost: 0
+    keywords_strong: []
+    keywords_weak: []
+
+  - topic_id: "99_미분류_검토필요"
+    name: "미분류·검토필요"
+    description: "자동 분류 신뢰도가 낮아 사람 검토가 필요한 자료"
+    trust_boost: 0
+    keywords_strong: []
+    keywords_weak: []
+
+# 문서유형별 중요도 가중 (PRD 12.2 document_type 10점 배분에 사용)
+document_type_scores:
+  법령: 10
+  판례: 10
+  실무제요: 10
+  매뉴얼: 9
+  지침: 9
+  연구보고서: 8
+  학술논문: 7
+  정책자료: 6
+  간행물: 5
+  프리프린트: 5
+  기타: 3

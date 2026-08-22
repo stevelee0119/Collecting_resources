@@ -1,0 +1,117 @@
+# =============================================================================
+# DL-RCIS 운영 설정 (PRD v2.1)
+# 비밀정보(API Key, 비밀번호, 토큰)는 이 파일에 넣지 않습니다. .env를 사용하세요.
+# =============================================================================
+
+run:
+  # UC-01 초기 백필 범위. 최초 실행(runs 테이블이 비어있을 때) 1회 적용됩니다.
+  backfill_start_date: "2026-01-01"
+  # UC-02 일일 증분: 등록 지연을 감안한 look-back 일수
+  daily_lookback_days: 3
+  # UC-03 월간 정합성 점검 재조회 범위
+  reconciliation_lookback_days: 45
+  # 한 소스가 한 번의 실행에서 처리할 최대 신규 항목 수 (0 = 무제한)
+  max_items_per_source: 200
+  # relevance_score 가 이 값 미만이면 원문 다운로드 대상에서 제외 (PRD 6.3 3차 필터)
+  download_relevance_threshold: 55
+  # 요약을 생성할 최소 중요도
+  summarize_relevance_threshold: 40
+
+scheduler:
+  timezone: "Asia/Seoul"
+  daily_incremental:
+    enabled: true
+    hour: 7
+    minute: 30
+  monthly_reconciliation:
+    enabled: true
+    day: 1
+    hour: 5
+    minute: 0
+
+http:
+  # User-Agent 에 서비스명과 관리자 연락처를 포함 (PRD 18.2 Polite Harvesting)
+  user_agent: "DL-RCIS/2.1 (Research Collection Bot; +mailto:CONTACT_EMAIL_HERE)"
+  timeout_seconds: 30
+  download_timeout_seconds: 120
+  max_retries: 3
+  backoff_base_seconds: 2.0
+  backoff_max_seconds: 60.0
+  max_redirects: 5
+  verify_tls: true
+
+download:
+  enabled: true
+  max_file_size_mb: 200
+  min_file_size_bytes: 1024
+  allowed_extensions: [".pdf", ".hwp", ".hwpx", ".docx"]
+
+storage:
+  data_dir: "data"
+  library_dir: "data/library"
+  staging_dir: "data/staging"
+  manifest_dir: "data/manifests"
+  summary_dir: "data/summaries"
+  quarantine_dir: "data/quarantine"
+  metadata_dir: "data/metadata"
+  csv_path: "data/metadata/list_download_resources.csv"
+  excel_path: "data/metadata/list_download_resources.xlsx"
+  database_path: "data/metadata/dlrcis.db"
+  max_filename_length: 160
+
+classification:
+  # 규칙기반 매칭 최소 점수. 미달 시 99_미분류_검토필요 로 보냅니다.
+  min_confidence: 0.25
+  # 두 개 이상 주제가 근소한 차이로 경합하면 90_복수주제 로 분류
+  multi_topic_margin: 0.15
+
+scoring:
+  # PRD 12.2 중요도 배점 (합계 100)
+  weights:
+    topic_fit: 40
+    source_trust: 20
+    recency: 15
+    practical_use: 10
+    document_type: 10
+    open_access: 5
+  priority_thresholds:
+    P1: 75
+    P2: 55
+    P3: 35
+
+summarizer:
+  # extractive = 외부 API 불필요(기본), llm = Anthropic Claude 사용
+  provider: "extractive"
+  llm:
+    model: "claude-opus-5"
+    max_tokens: 4000
+    effort: "medium"
+    # 요약에 투입할 원문 최대 글자수
+    max_input_chars: 60000
+  max_fulltext_chars: 40000
+
+notification:
+  enabled: true
+  # email 만 지원. 조직 정책상 메신저가 필요하면 notifier/ 에 어댑터를 추가하세요.
+  channel: "email"
+  # 본문 카드로 표시할 우선순위
+  card_priorities: ["P1", "P2"]
+  # 신규 자료가 없을 때 메일을 보낼지 여부
+  send_when_empty: false
+  attach_excel: true
+  email:
+    # transport: smtp | gmail_api  (PRD 15.4 — 가능하면 gmail_api 권장)
+    transport: "smtp"
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    use_starttls: true
+    # 주소는 .env 의 DLRCIS_SENDER_EMAIL / DLRCIS_RECEIVER_EMAIL 로도 지정 가능
+    sender_email: ""
+    receiver_email: ""
+    subject_prefix: "[DL-RCIS 일일 리서치 브리핑]"
+
+logging:
+  level: "INFO"
+  dir: "logs"
+  max_bytes: 10485760
+  backup_count: 7

@@ -1,0 +1,417 @@
+# =============================================================================
+# 검색어 사전 (PRD v2.1 §3.3 / §6.4 / §6.5)
+#
+# - canonical_ko  : 개념의 대표 한국어 명칭 (국내 소스의 핵심 검색어)
+# - ko_variants   : 띄어쓰기·붙여쓰기·약칭 변형 (국내 검색 확장)
+# - en_terms      : query_language=en 소스로 보낼 검수된 영문 학술용어
+# - en_acronyms   : 영문 약어·조약 약칭
+# - related_terms : 함께 조회할 인접 개념
+# - exclude_terms : 결과에서 배제할 잡음 용어
+# - source_scope  : domestic / international
+# - human_verified: 사람이 검수한 항목만 true. 자동제안은 machine_suggested: true
+#
+# 필수 키워드(§3.3)는 required_baseline 에 명시되어 있으며
+# scripts/check_search_terms.py 가 누락을 자동 검사합니다.
+# =============================================================================
+
+dictionary_version: "2026.08.22-1"
+maintainer: "DL-RCIS 운영자"
+changelog:
+  - date: "2026-08-22"
+    author: "초기 구축"
+    reason: "PRD v2.1 필수 키워드 베이스라인 및 한·영 대응사전 초기 구축"
+    added: ["§3.3 필수 키워드 21종", "국제법·작전법 영문 용어"]
+    removed: []
+
+# PRD §3.3 이 요구하는 필수 포함 키워드. 이 목록의 항목은 terms 에 반드시 존재해야 합니다.
+required_baseline:
+  - 포렌식
+  - 디지털포렌식
+  - 위법수집증거
+  - 위법수집증거배제법칙
+  - 판결
+  - 판례
+  - 방위사업법
+  - 방위사업
+  - 군사기밀보호법
+  - 군사기밀
+  - 군사기지
+  - 군사기지 및 군사시설 보호법
+  - 사법제도
+  - 군검찰
+  - 군사경찰
+  - 증거능력
+  - 법률전
+  - 군검사
+  - 형사소송법
+  - 군사법원
+  - 통합방위법
+
+terms:
+  # ------------------------- 형사·수사·증거 -------------------------
+  - canonical_ko: 포렌식
+    ko_variants: ["포렌식 수사", "과학수사"]
+    en_terms: ["forensic science", "forensic evidence"]
+    en_acronyms: []
+    related_terms: ["디지털포렌식", "증거능력"]
+    exclude_terms: ["의료포렌식"]
+    source_scope: [domestic, international]
+    topic_id: "05_형사_수사_사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 디지털포렌식
+    ko_variants: ["디지털 포렌식", "디지털증거"]
+    en_terms: ["digital forensics", "digital evidence"]
+    en_acronyms: []
+    related_terms: ["전자정보 압수수색", "증거능력"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "05_형사_수사_사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 위법수집증거
+    ko_variants: ["위법 수집 증거", "위법수집 증거"]
+    en_terms: ["illegally obtained evidence", "unlawfully obtained evidence"]
+    en_acronyms: []
+    related_terms: ["위법수집증거배제법칙"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "05_형사_수사_사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 위법수집증거배제법칙
+    ko_variants: ["위법수집증거 배제법칙", "증거배제법칙"]
+    en_terms: ["exclusionary rule", "exclusion of illegally obtained evidence"]
+    en_acronyms: []
+    related_terms: ["독수독과", "fruit of the poisonous tree"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "05_형사_수사_사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 증거능력
+    ko_variants: ["증거 능력"]
+    en_terms: ["admissibility of evidence"]
+    en_acronyms: []
+    related_terms: ["전문법칙", "hearsay rule"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "05_형사_수사_사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 형사소송법
+    ko_variants: ["형소법"]
+    en_terms: ["criminal procedure act", "criminal procedure law"]
+    en_acronyms: []
+    related_terms: ["수사절차", "공판절차"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "05_형사_수사_사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  # 판결/판례는 의미가 겹치더라도 §3.3 규칙에 따라 별도 seed term 으로 유지
+  - canonical_ko: 판결
+    ko_variants: ["판결문", "선고"]
+    en_terms: ["judgment", "court decision"]
+    en_acronyms: []
+    related_terms: ["판례"]
+    exclude_terms: []
+    source_scope: [domestic]
+    topic_id: "05_형사_수사_사법"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 판례
+    ko_variants: ["판례평석", "판례연구"]
+    en_terms: ["case law", "precedent"]
+    en_acronyms: []
+    related_terms: ["판결"]
+    exclude_terms: []
+    source_scope: [domestic]
+    topic_id: "05_형사_수사_사법"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 사법제도
+    ko_variants: ["사법 제도", "사법개혁"]
+    en_terms: ["judicial system", "administration of justice"]
+    en_acronyms: []
+    related_terms: ["법원조직"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "05_형사_수사_사법"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  # ------------------------- 군사법·군사사법 -------------------------
+  - canonical_ko: 군사법원
+    ko_variants: ["군사법원법", "보통군사법원", "고등군사법원"]
+    en_terms: ["military court", "court-martial"]
+    en_acronyms: []
+    related_terms: ["군사재판"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "01_군사법_군사사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 군검찰
+    ko_variants: ["군 검찰", "군검찰부"]
+    en_terms: ["military prosecution", "military prosecution service"]
+    en_acronyms: []
+    related_terms: ["군검사"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "01_군사법_군사사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 군검사
+    ko_variants: ["군 검사"]
+    en_terms: ["military prosecutor", "judge advocate"]
+    en_acronyms: ["JAG"]
+    related_terms: ["군법무관"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "01_군사법_군사사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 군사경찰
+    ko_variants: ["군 사경찰", "헌병"]
+    en_terms: ["military police"]
+    en_acronyms: ["MP"]
+    related_terms: ["군 수사기관"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "01_군사법_군사사법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  # ------------------------- 국방보안·시설 법제 -------------------------
+  - canonical_ko: 군사기밀보호법
+    ko_variants: ["군사기밀 보호법"]
+    en_terms: ["military secrets protection act", "protection of military secrets"]
+    en_acronyms: []
+    related_terms: ["군사기밀"]
+    exclude_terms: []
+    source_scope: [domestic]
+    topic_id: "03_국방정책_행정법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 군사기밀
+    ko_variants: ["군사 기밀", "군사비밀"]
+    en_terms: ["military secret", "classified military information"]
+    en_acronyms: []
+    related_terms: ["보안업무규정"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "03_국방정책_행정법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 군사기지
+    ko_variants: ["군사 기지", "군사시설"]
+    en_terms: ["military base", "military installation"]
+    en_acronyms: []
+    related_terms: ["군사기지 및 군사시설 보호법"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "03_국방정책_행정법"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 군사기지 및 군사시설 보호법
+    ko_variants: ["군사기지법", "군사시설보호법", "군사기지 및 군사시설보호법"]
+    en_terms: ["protection of military bases and installations act"]
+    en_acronyms: []
+    related_terms: ["보호구역"]
+    exclude_terms: []
+    source_scope: [domestic]
+    topic_id: "03_국방정책_행정법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 통합방위법
+    ko_variants: ["통합방위", "통합방위작전"]
+    en_terms: ["integrated defense act"]
+    en_acronyms: []
+    related_terms: ["국가동원"]
+    exclude_terms: []
+    source_scope: [domestic]
+    topic_id: "03_국방정책_행정법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  # ------------------------- 방위사업·조달 -------------------------
+  - canonical_ko: 방위사업법
+    ko_variants: ["방위사업 법"]
+    en_terms: ["defense acquisition program act"]
+    en_acronyms: ["DAPA"]
+    related_terms: ["방위사업"]
+    exclude_terms: []
+    source_scope: [domestic]
+    topic_id: "04_국방계약_조달법제"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 방위사업
+    ko_variants: ["방위산업", "방산"]
+    en_terms: ["defense acquisition", "defense procurement", "defense industry"]
+    en_acronyms: []
+    related_terms: ["국가계약법", "부정당업자 제재"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "04_국방계약_조달법제"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  # ------------------------- 국제법·작전법 -------------------------
+  - canonical_ko: 법률전
+    ko_variants: ["법률 전", "법적 전쟁"]
+    en_terms: ["lawfare", "legal warfare"]
+    en_acronyms: []
+    related_terms: ["작전법"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "07_국제법_작전법_국제인도법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 작전법
+    ko_variants: ["작전 법"]
+    en_terms: ["operational law"]
+    en_acronyms: []
+    related_terms: ["rules of engagement", "교전규칙"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "07_국제법_작전법_국제인도법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 국제인도법
+    ko_variants: ["국제 인도법", "무력분쟁법"]
+    en_terms: ["international humanitarian law", "law of armed conflict"]
+    en_acronyms: ["IHL", "LOAC"]
+    related_terms: ["제네바협약"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "07_국제법_작전법_국제인도법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 제네바협약
+    ko_variants: ["제네바 협약", "제네바협약 추가의정서"]
+    en_terms: ["Geneva Conventions", "Additional Protocols"]
+    en_acronyms: []
+    related_terms: ["국제인도법"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "07_국제법_작전법_국제인도법"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 해양법
+    ko_variants: ["해양 법", "유엔해양법협약"]
+    en_terms: ["law of the sea", "maritime law"]
+    en_acronyms: ["UNCLOS"]
+    related_terms: ["배타적경제수역", "freedom of navigation"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "07_국제법_작전법_국제인도법"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  # ------------------------- AI·디지털 법제 -------------------------
+  - canonical_ko: 법률AI
+    ko_variants: ["법률 AI", "리걸테크", "법률 인공지능"]
+    en_terms: ["legal AI", "legal technology", "AI in law"]
+    en_acronyms: []
+    related_terms: ["large language model"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "08_AI_법률AI_디지털법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 인공지능 거버넌스
+    ko_variants: ["AI 거버넌스", "인공지능 규제"]
+    en_terms: ["AI governance", "AI regulation", "algorithmic accountability"]
+    en_acronyms: []
+    related_terms: ["public sector AI"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "08_AI_법률AI_디지털법"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 자율무기체계
+    ko_variants: ["자율무기", "치명적 자율무기"]
+    en_terms: ["autonomous weapons systems", "lethal autonomous weapons"]
+    en_acronyms: ["LAWS"]
+    related_terms: ["meaningful human control"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "08_AI_법률AI_디지털법"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  # ------------------------- 인권·법무교육 -------------------------
+  - canonical_ko: 군인권
+    ko_variants: ["군 인권", "장병 인권"]
+    en_terms: ["human rights in the armed forces", "military human rights"]
+    en_acronyms: []
+    related_terms: ["국가인권위원회"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "06_헌법_인권"
+    priority: 1
+    human_verified: true
+    reviewed_at: "2026-08-22"
+
+  - canonical_ko: 법무교육
+    ko_variants: ["법학교육", "법률교육"]
+    en_terms: ["legal education", "military legal education"]
+    en_acronyms: []
+    related_terms: ["교육방법론"]
+    exclude_terms: []
+    source_scope: [domestic, international]
+    topic_id: "09_법무교육_교육방법론"
+    priority: 2
+    human_verified: true
+    reviewed_at: "2026-08-22"
