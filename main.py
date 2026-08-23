@@ -248,10 +248,113 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             print(f"  SMTP 비밀번호: {mask_secret(get_secret('DLRCIS_SMTP_PASSWORD'))}")
 
         print(f"\n요약 공급자: {settings.app.get('summarizer.provider', 'extractive')}")
+
+        if args.probe:
+            _probe_sources(settings)
+
         print()
         return 0
     finally:
         repo.close()
+
+
+class _LogCapture(logging.Handler):
+    """탐색 중 발생한 경고를 모아 실패 원인을 보여줍니다."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            self.messages.append(record.getMessage())
+        except Exception:
+            pass
+
+
+def _probe_sources(settings) -> None:
+    """소스마다 실제로 1회 호출해 인증이 통하는지 확인합니다.
+
+    `doctor` 기본 점검은 "값이 있는가"만 보므로, 잘못된 키·만료된 승인·
+    잘못된 인증키 형식은 잡아내지 못합니다. 이 점검은 실제 응답을 확인합니다.
+    """
+    from datetime import date, timedelta
+
+    from src.connectors import ConnectorContext, ConnectorError, build_connector
+    from src.discovery.query_expander import QueryExpander
+    from src.http_client import build_client
+
+    print("\n--- 실제 호출 점검 (--probe) ---")
+    print("  소스마다 1회씩 실제 요청을 보내 인증이 통하는지 확인합니다.\n")
+
+    until = date.today()
+    since = until - timedelta(days=30)
+    expander = QueryExpander(settings.search_terms)
+
+    ok = failed = skipped = 0
+    root = logging.getLogger()
+    # 점검 중에는 기존 핸들러 출력을 잠시 낮춰 결과 줄만 보이게 합니다.
+    original_levels = [(h, h.level) for h in root.handlers]
+
+    for source in settings.sources.enabled():
+        # 호출할 엔드포인트가 하나도 없으면 요청 자체가 나가지 않습니다.
+        if not any(m.endpoint for m in source.access_methods):
+            print(f"  [건너뜀] {source.source_id:<18} 엔드포인트 미설정 — 호출하지 않음")
+            skipped += 1
+            continue
+
+        client = None
+        capture = _LogCapture()
+        previous_level = root.level
+        for handler, _ in original_levels:
+            handler.setLevel(logging.CRITICAL)
+        root.addHandler(capture)
+        root.setLevel(logging.WARNING)
+        try:
+            client = build_client(settings.app, source)
+            connector = build_connector(
+                source,
+                ConnectorContext(app=settings.app, client=client, expander=expander, max_items=1),
+            )
+            if connector.passive:
+                print(f"  [건너뜀] {source.source_id:<18} 다른 소스가 발견한 자료를 흡수하는 소스")
+                skipped += 1
+                continue
+
+            queries = connector.prepare_queries()[:1]
+            items = []
+            for item in connector.discover(since, until, queries):
+                items.append(item)
+                break
+
+            if capture.messages:
+                # 탐색 중 경고가 있었다면 인증·요청 문제일 가능성이 높습니다.
+                reason = capture.messages[0]
+                print(f"  [실패  ] {source.source_id:<18} {reason[:110]}")
+                failed += 1
+            elif items:
+                print(f"  [성공  ] {source.source_id:<18} 응답 수신 (레코드 확인됨)")
+                ok += 1
+            else:
+                print(f"  [응답  ] {source.source_id:<18} 정상 응답이나 이 기간·검색어에 결과 없음")
+                ok += 1
+        except ConnectorError as exc:
+            print(f"  [건너뜀] {source.source_id:<18} {str(exc)[:100]}")
+            skipped += 1
+        except Exception as exc:
+            print(f"  [실패  ] {source.source_id:<18} {type(exc).__name__}: {str(exc)[:90]}")
+            failed += 1
+        finally:
+            root.removeHandler(capture)
+            root.setLevel(previous_level)
+            for handler, level in original_levels:
+                handler.setLevel(level)
+            if client is not None:
+                client.close()
+
+    print(f"\n  실제 호출 결과: 성공 {ok}개 / 실패 {failed}개 / 건너뜀 {skipped}개")
+    if failed:
+        print("  실패한 소스는 인증정보 값이 잘못되었거나 API 정책이 바뀌었을 수 있습니다.")
 
 
 # ---------------------------------------------------------------------------
@@ -340,6 +443,11 @@ def build_parser() -> argparse.ArgumentParser:
     schedule.set_defaults(func=cmd_schedule)
 
     doctor = sub.add_parser("doctor", help="설정·인증정보·저장소 점검", parents=[common])
+    doctor.add_argument(
+        "--probe",
+        action="store_true",
+        help="소스마다 실제로 1회 호출해 인증이 통하는지 확인 (네트워크 필요)",
+    )
     doctor.set_defaults(func=cmd_doctor)
 
     search = sub.add_parser("search", help="수집 자료 전문검색", parents=[common])
