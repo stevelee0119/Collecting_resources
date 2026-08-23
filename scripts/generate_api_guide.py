@@ -98,7 +98,43 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "redirect_uri": "불필요",
         "test": "python main.py run --daily --source nkis --dry-run",
         "renewal": UNKNOWN,
-        "cautions": "발급받은 엔드포인트를 config/sources.yaml 의 endpoint 에 입력해야 동작합니다.",
+        "cautions": (
+            "엔드포인트는 운영자가 openSvcList.do 에서 확인해 입력했습니다"
+            "(https://nkis.re.kr/nkisApi/search/TongList.do). 공식 문서를 직접 대조하지는 "
+            "못했으므로 PENDING_VERIFICATION 상태입니다. request/field_map 은 아직 "
+            "공공데이터포털 표준 형식 기본값이라 실제 요청인자·응답 필드명과 다르면 0건이 "
+            "나올 수 있습니다. `python main.py doctor --probe` 로 확인하십시오."
+        ),
+    },
+    "kknowledge": {
+        "purpose_example": (
+            "국가기관·지자체·공공기관이 생산한 국방·법률·정책 지식정보의 "
+            "통합 메타데이터 수집 및 내부 리서치 색인 구축"
+        ),
+        "account_required": "예 (디지털집현전 회원가입)",
+        "menu_path": (
+            "디지털집현전(k-knowledge.kr) 회원가입 → 메타데이터 대시보드"
+            "(metadash.k-knowledge.kr) → Open API 서비스 신청 → 사업자/기관 정보 입력 후 신청. "
+            "연계 안내는 k-knowledge.kr/m/guide/nkiLink.jsp"
+        ),
+        "approval": "운영기관 검토 후 승인",
+        "pricing": UNKNOWN,
+        "scopes": (
+            "제공 API 2종 — (1) 국가지식정보 메타데이터 제공 API, "
+            "(2) 디지털집현전 보유 국가지식정보 검색 API. 이 시스템은 (2)를 사용합니다."
+        ),
+        "redirect_uri": "불필요",
+        "test": "python main.py run --daily --source kknowledge --dry-run",
+        "renewal": UNKNOWN,
+        "cautions": (
+            "상세주소(엔드포인트)·요청인자·응답 필드명이 공개 문서에 노출되지 않고 "
+            "서비스 신청 승인 후 발급되는 명세에만 담기므로, config/sources.yaml 의 "
+            "endpoint 는 비워 두었습니다. 승인 후 endpoint 와 request/field_map 을 채우고 "
+            "`python main.py doctor --probe` 로 확인하십시오. "
+            "여러 기관 자료를 모으는 집계 플랫폼이라 KCI·NKIS·법령정보와 자료가 겹칠 수 "
+            "있으나 다단계 중복제거가 처리합니다. 원문은 원 기관 사이트에 있으므로 "
+            "기본 정책은 link_only 이며, 기관별 이용조건 확인 후에만 다운로드로 전환하십시오."
+        ),
     },
     "prism": {
         "purpose_example": "중앙·지방정부 정책연구용역 보고서의 정기 수집",
@@ -339,9 +375,12 @@ def _action_status(source: Any, method: Any) -> tuple[str, str]:
         if method.verification_status == "VERIFIED":
             # 공식적으로 해당 API 가 없다고 확인된 경우 (예: RISS, SSRN)
             return "➖ 대상 아님", "자동수집 대상이 아닙니다. 추가 조치 불필요."
+        # 접근수단마다 근거 문서가 다를 수 있으므로(예: 발간물 RSS vs 결정문 Open API)
+        # 해당 수단의 확인근거를 우선 안내하고, 없을 때만 소스 대표 문서를 씁니다.
+        doc = method.verified_source or source.auth_docs_url
         return (
             "⬜ 조치 필요",
-            f"공식 문서({source.auth_docs_url})에서 상세주소를 확인해 "
+            f"공식 문서({doc})에서 상세주소를 확인해 "
             f"`config/sources.yaml` 의 `endpoint` 에 입력",
         )
 
@@ -688,11 +727,25 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
                 f"| {status} | {todo} |"
             )
 
-    keyless_rows = "\n".join(
-        f"- **{s.name}** (`{s.source_id}`) — 별도 발급 없이 사용 가능"
-        + (" (연락 이메일 `CONTACT_EMAIL` 권장)" if s.source_id in ("crossref", "openalex", "unpaywall") else "")
-        for s in keyless
-    ) or "- (없음)"
+    def _keyless_row(s: Any) -> str:
+        row = f"- **{s.name}** (`{s.source_id}`) — 발급 불필요"
+        if s.source_id in ("crossref", "openalex", "unpaywall"):
+            row += " (연락 이메일 `CONTACT_EMAIL` 권장)"
+        # 인증은 필요 없어도 엔드포인트가 비어 있으면 아직 수집되지 않습니다.
+        if not any(m.endpoint for m in s.access_methods):
+            verified = all(
+                m.verification_status == "VERIFIED" for m in s.access_methods
+            )
+            row += (
+                ". 다만 자동수집 대상이 아니므로(공식 피드/API 없음 확인) 링크 보존만 합니다"
+                if verified
+                else ". **다만 endpoint 가 아직 비어 있어 수집되지 않습니다** — 공식 피드 주소 확인 필요"
+            )
+        else:
+            row += " — 바로 사용 가능"
+        return row
+
+    keyless_rows = "\n".join(_keyless_row(s) for s in keyless) or "- (없음)"
 
     # 조치 현황 요약
     done, partial, todo_list, na = [], [], [], []

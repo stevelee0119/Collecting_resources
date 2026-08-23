@@ -50,6 +50,27 @@ def test_nkis_registered(registry):
     assert nkis.method("OPEN_API").credential_env_var == "NKIS_API_KEY"
 
 
+def test_kknowledge_registered(registry):
+    """[ ] 디지털집현전(국가지식정보 통합플랫폼) 수집 대상 등록"""
+    kk = registry.get("kknowledge")
+    assert kk is not None and kk.enabled
+    method = kk.method("OPEN_API")
+    assert method is not None
+    assert method.credential_env_var == "KKNOWLEDGE_API_KEY"
+    assert CONNECTOR_REGISTRY[kk.connector].__name__ == "KKnowledgeConnector"
+    # 집계 플랫폼의 원문은 원 기관에 있으므로 기본은 링크 보존입니다.
+    assert kk.download_policy == "link_only"
+
+
+def test_every_source_has_a_registered_connector(registry):
+    """sources.yaml 의 connector 는 모두 CONNECTOR_REGISTRY 에 있어야 합니다."""
+    for source in registry.sources:
+        assert source.connector in CONNECTOR_REGISTRY, (
+            f"{source.source_id}: connector '{source.connector}' 가 "
+            f"src/connectors/__init__.py 에 등록되지 않았습니다."
+        )
+
+
 def test_law_openapi_registered(registry):
     """[ ] 국가법령정보 공동활용 Open API 수집 가능"""
     law = registry.get("law_go_kr")

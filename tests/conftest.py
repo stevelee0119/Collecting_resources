@@ -103,6 +103,7 @@ def _clean_env(monkeypatch):
     """테스트가 실제 인증정보를 사용하지 않도록 환경변수를 비웁니다."""
     for var in (
         "KCI_API_KEY", "RISS_API_KEY", "NKIS_API_KEY", "SCIENCEON_API_KEY",
+        "SCIENCEON_CLIENT_ID", "KKNOWLEDGE_API_KEY",
         "DATA_GO_KR_API_KEY", "LAW_GO_KR_OC", "CORE_API_KEY",
         "SEMANTIC_SCHOLAR_API_KEY", "OPENALEX_API_KEY", "DOAJ_API_KEY",
         "ZENODO_API_KEY", "ANTHROPIC_API_KEY", "CONTACT_EMAIL",

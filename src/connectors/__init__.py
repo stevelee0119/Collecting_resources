@@ -22,6 +22,7 @@ from .doaj import DoajConnector
 from .generic_api import GenericApiConnector
 from .institution_feed import InstitutionFeedConnector
 from .kci import KciConnector
+from .kknowledge import KKnowledgeConnector
 from .law_openapi import LawOpenApiConnector
 from .nars import NarsConnector
 from .nkis import NkisConnector
@@ -40,6 +41,7 @@ CONNECTOR_REGISTRY: dict[str, type[SourceConnector]] = {
     "scienceon": ScienceOnConnector,
     "nars": NarsConnector,
     "nkis": NkisConnector,
+    "kknowledge": KKnowledgeConnector,
     "prism": PrismConnector,
     "law_openapi": LawOpenApiConnector,
     "institution_feed": InstitutionFeedConnector,

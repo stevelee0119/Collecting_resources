@@ -5,7 +5,7 @@
 >
 > - 생성일: 2026-08-23
 > - Source Registry 버전: `2026.08.22-1`
-> - 대상 소스: 전체 21개 (사전 발급·승인 필요 13개)
+> - 대상 소스: 전체 22개 (사전 발급·승인 필요 15개)
 
 ## 0. 조치 현황 한눈에 보기
 
@@ -29,19 +29,21 @@
 
 - (없음)
 
-**⬜ 추가 조치 필요 (15건)**
+**⬜ 추가 조치 필요 (17건)**
 
 - KCI 한국학술지인용색인 (`kci` / OPEN_API) — 발급 후 `.env` 에 `KCI_API_KEY` 설정
 - ScienceON (KISTI) (`scienceon` / OPEN_API) — 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정
 - NKIS 국가정책연구포털 (`nkis` / OPEN_API) — 발급 후 `.env` 에 `NKIS_API_KEY` 설정
+- 디지털집현전 (국가지식정보 통합플랫폼) (`kknowledge` / OPEN_API) — 공식 문서(https://metadash.k-knowledge.kr/openApiService/apisso/business)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - PRISM 정책연구관리시스템 (`prism` / OPEN_API) — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
 - 국가법령정보 공동활용 (`law_go_kr` / OPEN_API) — 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정
 - 국회입법조사처 (`nars` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15125970/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 사법정책연구원 (`jpri` / RSS) — 공식 문서(https://jpri.scourt.go.kr/post/postList.do?boardSeq=7&menuSeq=11&lang=ko)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 법무연수원 (`ioj` / RSS) — 공식 문서(https://book.ioj.go.kr/library)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
-- 한국형사·법무정책연구원 (`kicj` / RSS) — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 한국형사·법무정책연구원 (`kicj` / RSS) — 공식 문서(https://www.kicj.re.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 한국형사·법무정책연구원 (`kicj` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 국가인권위원회 (`humanrights` / RSS) — 공식 문서(https://library.humanrights.go.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 국가인권위원회 (`humanrights` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15141147/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 한국국방연구원 (KIDA) (`kida` / RSS) — 공식 문서(https://kida.re.kr/frt/contents/frtContents.do?sidx=2127&depth=3)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - OpenAlex (`openalex` / OPEN_API) — 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정
 - CORE (`core` / OPEN_API) — 발급 후 `.env` 에 `CORE_API_KEY` 설정
@@ -107,6 +109,7 @@ Secrets 이름을 이와 동일하게 맞추면 워크플로에서 그대로 매
 | `RISS_API_KEY` | RISS 학술연구정보서비스 OPEN_API | ➖ 불필요 (엔드포인트 미확정) |
 | `SCIENCEON_API_KEY` | ScienceON (KISTI) OPEN_API | ✅ 필수 |
 | `NKIS_API_KEY` | NKIS 국가정책연구포털 OPEN_API | ✅ 필수 |
+| `KKNOWLEDGE_API_KEY` | 디지털집현전 (국가지식정보 통합플랫폼) OPEN_API | ➖ 불필요 (엔드포인트 미확정) |
 | `DATA_GO_KR_API_KEY` | PRISM 정책연구관리시스템 OPEN_API | ✅ 필수 |
 | `LAW_GO_KR_OC` | 국가법령정보 공동활용 OPEN_API | ✅ 필수 |
 | `CONTACT_EMAIL` | Crossref OPEN_API | 선택 (있으면 쿼터·속도 유리) |
@@ -191,10 +194,12 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | RISS 학술연구정보서비스 (`riss`) | OPEN_API / 기관 승인 필요 | `RISS_API_KEY` | ➖ 대상 아님 | 자동수집 대상이 아닙니다. 추가 조치 불필요. |
 | ScienceON (KISTI) (`scienceon`) | OPEN_API / API Key 필요 | `SCIENCEON_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정 |
 | NKIS 국가정책연구포털 (`nkis`) | OPEN_API / API Key 필요 | `NKIS_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `NKIS_API_KEY` 설정 |
+| 디지털집현전 (국가지식정보 통합플랫폼) (`kknowledge`) | OPEN_API / API Key 필요 | `KKNOWLEDGE_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://metadash.k-knowledge.kr/openApiService/apisso/business)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
 | PRISM 정책연구관리시스템 (`prism`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정 |
 | 국가법령정보 공동활용 (`law_go_kr`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | ⬜ 조치 필요 | 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정 |
 | 국회입법조사처 (`nars`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15125970/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
 | 한국형사·법무정책연구원 (`kicj`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
+| 국가인권위원회 (`humanrights`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15141147/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
 | OpenAlex (`openalex`) | OPEN_API / API Key 필요 | `OPENALEX_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정 |
 | Semantic Scholar (`semantic_scholar`) | OPEN_API / API Key 필요 | `SEMANTIC_SCHOLAR_API_KEY` | ✅ 완료 | 별도 발급 없이 사용 가능 |
 | CORE (`core`) | OPEN_API / API Key 필요 | `CORE_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `CORE_API_KEY` 설정 |
@@ -203,14 +208,13 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ## 2. 별도 발급 없이 사용 가능한 소스
 
-- **사법정책연구원** (`jpri`) — 별도 발급 없이 사용 가능
-- **법무연수원** (`ioj`) — 별도 발급 없이 사용 가능
-- **국가인권위원회** (`humanrights`) — 별도 발급 없이 사용 가능
-- **한국국방연구원 (KIDA)** (`kida`) — 별도 발급 없이 사용 가능
-- **Crossref** (`crossref`) — 별도 발급 없이 사용 가능 (연락 이메일 `CONTACT_EMAIL` 권장)
-- **DOAJ** (`doaj`) — 별도 발급 없이 사용 가능
-- **arXiv** (`arxiv`) — 별도 발급 없이 사용 가능
-- **SSRN** (`ssrn`) — 별도 발급 없이 사용 가능
+- **사법정책연구원** (`jpri`) — 발급 불필요. **다만 endpoint 가 아직 비어 있어 수집되지 않습니다** — 공식 피드 주소 확인 필요
+- **법무연수원** (`ioj`) — 발급 불필요. **다만 endpoint 가 아직 비어 있어 수집되지 않습니다** — 공식 피드 주소 확인 필요
+- **한국국방연구원 (KIDA)** (`kida`) — 발급 불필요. **다만 endpoint 가 아직 비어 있어 수집되지 않습니다** — 공식 피드 주소 확인 필요
+- **Crossref** (`crossref`) — 발급 불필요 (연락 이메일 `CONTACT_EMAIL` 권장) — 바로 사용 가능
+- **DOAJ** (`doaj`) — 발급 불필요 — 바로 사용 가능
+- **arXiv** (`arxiv`) — 발급 불필요 — 바로 사용 가능
+- **SSRN** (`ssrn`) — 발급 불필요. 다만 자동수집 대상이 아니므로(공식 피드/API 없음 확인) 링크 보존만 합니다
 
 > Crossref·OpenAlex 는 연락 이메일을 제공하면 polite pool 로 안정적인 응답을 받습니다.
 > Unpaywall 은 모든 요청에 이메일이 **필수**입니다.
@@ -339,13 +343,47 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | 12. 환경변수명 | `NKIS_API_KEY` |
 | 13. 동작 확인 방법 | `python main.py run --daily --source nkis --dry-run` |
 | 14. 키 만료·갱신·회수 | 공식 문서 확인 필요 |
-| 15. 이용약관·자동수집 주의사항 | 발급받은 엔드포인트를 config/sources.yaml 의 endpoint 에 입력해야 동작합니다. |
+| 15. 이용약관·자동수집 주의사항 | 엔드포인트는 운영자가 openSvcList.do 에서 확인해 입력했습니다(https://nkis.re.kr/nkisApi/search/TongList.do). 공식 문서를 직접 대조하지는 못했으므로 PENDING_VERIFICATION 상태입니다. request/field_map 은 아직 공공데이터포털 표준 형식 기본값이라 실제 요청인자·응답 필드명과 다르면 0건이 나올 수 있습니다. `python main.py doctor --probe` 로 확인하십시오. |
 | 16. 공식 문서 최종 확인일 | 2026-08-22 |
 
 **설정된 엔드포인트**
   - `https://nkis.re.kr/nkisApi/search/TongList.do`
 
 **수집 정책**: `download_policy: allowed` / `robots_policy: respect` / `rate_limit_rps: 0.5`
+
+> ⚠ **구현 직전 재확인 필요** — 아래 접근방식은 공식 문서로 확정되지 않았습니다: OPEN_API
+
+---
+
+### 디지털집현전 (국가지식정보 통합플랫폼) (`kknowledge`)
+
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://metadash.k-knowledge.kr/openApiService/apisso/business)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `KKNOWLEDGE_API_KEY` / 확인상태: `PENDING_VERIFICATION`
+  - 확인근거: https://metadash.k-knowledge.kr/openApiService/apisso/business (2026-08-23, 공식 문서 검색결과 기준)
+
+| 항목 | 내용 |
+| --- | --- |
+| 1. 서비스/기관명 | 디지털집현전 (국가지식정보 통합플랫폼) |
+| 2. 사용 API/인증방식 | OPEN_API(API Key 필요) |
+| 3. 사전 발급 필요 여부 | 예 |
+| 4. 공식 발급/신청 페이지 | https://metadash.k-knowledge.kr/openApiService/apisso/business |
+| 5. 계정 생성 필요 여부 | 예 (디지털집현전 회원가입) |
+| 6. 신청 메뉴 경로 | 디지털집현전(k-knowledge.kr) 회원가입 → 메타데이터 대시보드(metadash.k-knowledge.kr) → Open API 서비스 신청 → 사업자/기관 정보 입력 후 신청. 연계 안내는 k-knowledge.kr/m/guide/nkiLink.jsp |
+| 7. 서비스 목적 예시 | 국가기관·지자체·공공기관이 생산한 국방·법률·정책 지식정보의 통합 메타데이터 수집 및 내부 리서치 색인 구축 |
+| 8. 승인 절차 | 운영기관 검토 후 승인 |
+| 9. 무료/유료 및 쿼터 | 공식 문서 확인 필요 |
+| 10. OAuth Scope/권한 | 제공 API 2종 — (1) 국가지식정보 메타데이터 제공 API, (2) 디지털집현전 보유 국가지식정보 검색 API. 이 시스템은 (2)를 사용합니다. |
+| 11. Redirect URI 필요 여부 | 불필요 |
+| 12. 환경변수명 | `KKNOWLEDGE_API_KEY` |
+| 13. 동작 확인 방법 | `python main.py run --daily --source kknowledge --dry-run` |
+| 14. 키 만료·갱신·회수 | 공식 문서 확인 필요 |
+| 15. 이용약관·자동수집 주의사항 | 상세주소(엔드포인트)·요청인자·응답 필드명이 공개 문서에 노출되지 않고 서비스 신청 승인 후 발급되는 명세에만 담기므로, config/sources.yaml 의 endpoint 는 비워 두었습니다. 승인 후 endpoint 와 request/field_map 을 채우고 `python main.py doctor --probe` 로 확인하십시오. 여러 기관 자료를 모으는 집계 플랫폼이라 KCI·NKIS·법령정보와 자료가 겹칠 수 있으나 다단계 중복제거가 처리합니다. 원문은 원 기관 사이트에 있으므로 기본 정책은 link_only 이며, 기관별 이용조건 확인 후에만 다운로드로 전환하십시오. |
+| 16. 공식 문서 최종 확인일 | 2026-08-23 |
+
+**설정된 엔드포인트**
+  - (미설정)
+
+**수집 정책**: `download_policy: link_only` / `robots_policy: respect` / `rate_limit_rps: 0.5`
 
 > ⚠ **구현 직전 재확인 필요** — 아래 접근방식은 공식 문서로 확정되지 않았습니다: OPEN_API
 
@@ -471,7 +509,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | 12. 환경변수명 | 없음 |
 | 13. 동작 확인 방법 | `python main.py doctor` |
 | 14. 키 만료·갱신·회수 | 공식 문서 확인 필요 |
-| 15. 이용약관·자동수집 주의사항 | 공식 RSS 는 확인되지 않았습니다. 발간자료(연구보고서·외국사법제도연구·학술행사자료)는 게시판(postList.do)으로 제공되므로, 자동수집 전 robots.txt 와 이용약관을 확인하고 허용되는 경우에만 전용 Adapter 를 구성하십시오. |
+| 15. 이용약관·자동수집 주의사항 | 공식 RSS 는 확인되지 않았습니다. 발간자료(연구보고서·외국사법제도연구·학술행사자료)는 게시판(postList.do)으로 제공되므로, 자동수집 전 robots.txt 와 이용약관을 확인하고 허용되는 경우에만 전용 Adapter 를 구성하십시오. 참고: 대법원 사법정보공유포털(openapi.scourt.go.kr)이 연계 API 를 제공하지만 제공 범위가 사건기본정보·사건진행내용이어서 발간물 수집에는 쓸 수 없습니다. 2026-08-23 확인. |
 | 16. 공식 문서 최종 확인일 | 2026-08-22 |
 
 **설정된 엔드포인트**
@@ -519,7 +557,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 한국형사·법무정책연구원 (`kicj`)
 
-- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.kicj.re.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://www.kicj.re.kr/ (2026-08-22, 공식 문서 검색결과 기준)
 - **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
@@ -559,13 +597,16 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 - **조치 현황: ⬜ 조치 필요** — 공식 문서(https://library.humanrights.go.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://library.humanrights.go.kr/ (2026-08-22, 공식 문서 검색결과 기준)
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.data.go.kr/data/15141147/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `DATA_GO_KR_API_KEY` / 확인상태: `PENDING_VERIFICATION`
+  - 확인근거: https://www.data.go.kr/data/15141147/openapi.do (2026-08-23, 공식 문서 검색결과 기준)
 
 | 항목 | 내용 |
 | --- | --- |
 | 1. 서비스/기관명 | 국가인권위원회 |
-| 2. 사용 API/인증방식 | RSS(불필요) |
-| 3. 사전 발급 필요 여부 | 아니오 |
-| 4. 공식 발급/신청 페이지 | https://library.humanrights.go.kr/ |
+| 2. 사용 API/인증방식 | RSS(불필요), OPEN_API(API Key 필요) |
+| 3. 사전 발급 필요 여부 | 예 |
+| 4. 공식 발급/신청 페이지 | https://www.data.go.kr/data/15141147/openapi.do |
 | 5. 계정 생성 필요 여부 | 공식 문서 확인 필요 |
 | 6. 신청 메뉴 경로 | 공식 문서 확인 필요 |
 | 7. 서비스 목적 예시 | 공식 문서 확인 필요 |
@@ -573,10 +614,10 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | 9. 무료/유료 및 쿼터 | 공식 문서 확인 필요 |
 | 10. OAuth Scope/권한 | 해당 없음 |
 | 11. Redirect URI 필요 여부 | 불필요 |
-| 12. 환경변수명 | 없음 |
+| 12. 환경변수명 | `DATA_GO_KR_API_KEY` |
 | 13. 동작 확인 방법 | `python main.py doctor` |
 | 14. 키 만료·갱신·회수 | 공식 문서 확인 필요 |
-| 15. 이용약관·자동수집 주의사항 | 공식 RSS 는 확인되지 않았습니다. 결정례·판례·발간물은 인권도서관(library.humanrights.go.kr)에서 제공되므로 해당 시스템의 공개 인터페이스를 먼저 확인하십시오. |
+| 15. 이용약관·자동수집 주의사항 | 자료가 두 경로로 나뉩니다. (1) 발간물·연구보고서 — 인권도서관(library.humanrights.go.kr). 공식 RSS 가 확인되지 않아 자동수집 전 robots.txt 와 이용약관 확인이 필요합니다. (2) 진정사건 결정문 — 법제처가 공공데이터포털에 개방한 '국가인권위원회 결정문 목록 조회'(15141147) / '결정문 본문 조회'(15141148) API. DATA_GO_KR_API_KEY 로 활용신청을 하면 상세 명세가 나오므로, 그때 endpoint 와 request/field_map 을 채우십시오. 두 데이터셋의 상세주소는 아직 대조하지 못했습니다. |
 | 16. 공식 문서 최종 확인일 | 2026-08-22 |
 
 **설정된 엔드포인트**
@@ -584,7 +625,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 **수집 정책**: `download_policy: manual_review` / `robots_policy: respect` / `rate_limit_rps: 0.3`
 
-> ⚠ **구현 직전 재확인 필요** — 아래 접근방식은 공식 문서로 확정되지 않았습니다: RSS
+> ⚠ **구현 직전 재확인 필요** — 아래 접근방식은 공식 문서로 확정되지 않았습니다: RSS, OPEN_API
 
 ---
 
@@ -968,6 +1009,7 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 | `RISS_API_KEY` | RISS 학술연구정보서비스 OPEN_API 인증 | 필수 |
 | `SCIENCEON_API_KEY` | ScienceON (KISTI) OPEN_API 인증 | 필수 |
 | `NKIS_API_KEY` | NKIS 국가정책연구포털 OPEN_API 인증 | 필수 |
+| `KKNOWLEDGE_API_KEY` | 디지털집현전 (국가지식정보 통합플랫폼) OPEN_API 인증 | 필수 |
 | `DATA_GO_KR_API_KEY` | PRISM 정책연구관리시스템 OPEN_API 인증 | 필수 |
 | `LAW_GO_KR_OC` | 국가법령정보 공동활용 OPEN_API 인증 | 필수 |
 | `CONTACT_EMAIL` | Crossref OPEN_API 인증 | 선택 |

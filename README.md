@@ -123,6 +123,7 @@ DLRCIS_SMTP_PASSWORD=                   # Gmail 앱 비밀번호
 OPENALEX_API_KEY=                       # 2026-02-13 부터 필수
 KCI_API_KEY=
 NKIS_API_KEY=
+KKNOWLEDGE_API_KEY=                    # 디지털집현전
 LAW_GO_KR_OC=
 ```
 
