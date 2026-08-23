@@ -163,6 +163,30 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
             "쓰므로, RSS 주소를 찾으면 별도 소스로 분리해야 합니다."
         ),
     },
+    "nars": {
+        "purpose_example": "국회입법조사처 연구보고서·발간물의 정기 수집",
+        "account_required": "예 (열린국회정보 회원가입)",
+        "menu_path": (
+            "열린국회정보(open.assembly.go.kr) → 회원가입 → 인증키 신청. "
+            "계정당 최대 10개까지 발급받아 용도별로 나눠 쓸 수 있습니다."
+        ),
+        "approval": UNKNOWN,
+        "pricing": UNKNOWN,
+        "scopes": "해당 없음 (API Key 방식)",
+        "redirect_uri": "불필요",
+        "test": "python main.py run --daily --source nars --dry-run",
+        "renewal": UNKNOWN,
+        "cautions": (
+            "**인증키가 공공데이터포털 키와 다릅니다.** 열린국회정보 전용 키를 "
+            "발급받아 ASSEMBLY_API_KEY 로 등록하고, KEY 파라미터로 전달합니다. "
+            "API 주소는 난수형 ID 를 씁니다(.../portal/openapi/{API_ID}). "
+            "응답 필드명은 아직 대조하지 못했으므로 첫 실행 로그에 찍히는 실제 "
+            "응답 필드를 보고 sources.yaml 의 field_map 을 채우십시오. "
+            "브라우저에서 ?KEY=sample&Type=json&pIndex=1&pSize=5 로 미리 확인할 수 "
+            "있습니다. 공공데이터포털 경로는 2026-08-23 기준 활용신청 미승인"
+            "(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)이라 대체 경로로만 기록했습니다."
+        ),
+    },
     "prism": {
         "purpose_example": "중앙·지방정부 정책연구용역 보고서의 정기 수집",
         "account_required": "예 (공공데이터포털 회원가입)",

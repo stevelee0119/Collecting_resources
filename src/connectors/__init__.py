@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from ..models import SourceConfig
 from .arxiv import ArxivConnector
+from .assembly_open import AssemblyOpenConnector
 from .base import (
     ConnectorContext,
     ConnectorError,
@@ -40,6 +41,7 @@ CONNECTOR_REGISTRY: dict[str, type[SourceConnector]] = {
     "riss": RissConnector,
     "scienceon": ScienceOnConnector,
     "nars": NarsConnector,
+    "assembly_open": AssemblyOpenConnector,
     "nkis": NkisConnector,
     "kknowledge": KKnowledgeConnector,
     "prism": PrismConnector,

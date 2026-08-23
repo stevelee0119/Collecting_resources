@@ -36,7 +36,7 @@
 - 디지털집현전 (국가지식정보 통합플랫폼) (`kknowledge` / OPEN_API) — 발급 후 `.env` 에 `KKNOWLEDGE_API_KEY` 설정
 - PRISM 정책연구관리시스템 (`prism` / OPEN_API) — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
 - 국가법령정보 공동활용 (`law_go_kr` / OPEN_API) — 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정
-- 국회입법조사처 (`nars` / OPEN_API) — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
+- 국회입법조사처 (`nars` / OPEN_API) — 발급 후 `.env` 에 `ASSEMBLY_API_KEY` 설정
 - 사법정책연구원 (`jpri` / RSS) — 공식 문서(https://jpri.scourt.go.kr/post/postList.do?boardSeq=7&menuSeq=11&lang=ko)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 법무연수원 (`ioj` / RSS) — 공식 문서(https://book.ioj.go.kr/library)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 한국형사·법무정책연구원 (`kicj` / RSS) — 공식 문서(https://www.kicj.re.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
@@ -116,6 +116,7 @@ Secrets 이름을 이와 동일하게 맞추면 워크플로에서 그대로 매
 | `KKNOWLEDGE_API_KEY` | 디지털집현전 (국가지식정보 통합플랫폼) OPEN_API | ✅ 필수 |
 | `DATA_GO_KR_API_KEY` | PRISM 정책연구관리시스템 OPEN_API | ✅ 필수 |
 | `LAW_GO_KR_OC` | 국가법령정보 공동활용 OPEN_API | ✅ 필수 |
+| `ASSEMBLY_API_KEY` | 국회입법조사처 OPEN_API | ✅ 필수 |
 | `CONTACT_EMAIL` | Crossref OPEN_API | 선택 (있으면 쿼터·속도 유리) |
 | `OPENALEX_API_KEY` | OpenAlex OPEN_API | ✅ 필수 |
 | `SEMANTIC_SCHOLAR_API_KEY` | Semantic Scholar OPEN_API | 선택 (있으면 쿼터·속도 유리) |
@@ -200,7 +201,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | 디지털집현전 (국가지식정보 통합플랫폼) (`kknowledge`) | OPEN_API / API Key 필요 | `KKNOWLEDGE_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `KKNOWLEDGE_API_KEY` 설정 |
 | PRISM 정책연구관리시스템 (`prism`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정 |
 | 국가법령정보 공동활용 (`law_go_kr`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | ⬜ 조치 필요 | 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정 |
-| 국회입법조사처 (`nars`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정 |
+| 국회입법조사처 (`nars`) | OPEN_API / API Key 필요 | `ASSEMBLY_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `ASSEMBLY_API_KEY` 설정 |
 | 한국형사·법무정책연구원 (`kicj`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
 | 국가인권위원회 (`humanrights`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | ⬜ 조치 필요 | 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정 |
 | OpenAlex (`openalex`) | OPEN_API / API Key 필요 | `OPENALEX_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정 |
@@ -458,33 +459,33 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 국회입법조사처 (`nars`)
 
-- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
-- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `DATA_GO_KR_API_KEY` / 확인상태: `PENDING_VERIFICATION`
-  - 확인근거: https://www.data.go.kr/data/15125970/openapi.do (2026-08-23, 운영자가 직접 입력 (공식 문서 대조 전))
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `ASSEMBLY_API_KEY` 설정
+- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `ASSEMBLY_API_KEY` / 확인상태: `PENDING_VERIFICATION`
+  - 확인근거: https://open.assembly.go.kr/portal/openapi/openApiDevPage.do (2026-08-23, 운영자가 직접 입력 (공식 문서 대조 전))
 
 | 항목 | 내용 |
 | --- | --- |
 | 1. 서비스/기관명 | 국회입법조사처 |
 | 2. 사용 API/인증방식 | OPEN_API(API Key 필요) |
 | 3. 사전 발급 필요 여부 | 예 |
-| 4. 공식 발급/신청 페이지 | https://www.data.go.kr/data/15125970/openapi.do |
-| 5. 계정 생성 필요 여부 | 공식 문서 확인 필요 |
-| 6. 신청 메뉴 경로 | 공식 문서 확인 필요 |
-| 7. 서비스 목적 예시 | 공식 문서 확인 필요 |
+| 4. 공식 발급/신청 페이지 | https://open.assembly.go.kr/portal/openapi/openApiDevPage.do |
+| 5. 계정 생성 필요 여부 | 예 (열린국회정보 회원가입) |
+| 6. 신청 메뉴 경로 | 열린국회정보(open.assembly.go.kr) → 회원가입 → 인증키 신청. 계정당 최대 10개까지 발급받아 용도별로 나눠 쓸 수 있습니다. |
+| 7. 서비스 목적 예시 | 국회입법조사처 연구보고서·발간물의 정기 수집 |
 | 8. 승인 절차 | 공식 문서 확인 필요 |
 | 9. 무료/유료 및 쿼터 | 공식 문서 확인 필요 |
-| 10. OAuth Scope/권한 | 해당 없음 |
+| 10. OAuth Scope/권한 | 해당 없음 (API Key 방식) |
 | 11. Redirect URI 필요 여부 | 불필요 |
-| 12. 환경변수명 | `DATA_GO_KR_API_KEY` |
-| 13. 동작 확인 방법 | `python main.py doctor` |
+| 12. 환경변수명 | `ASSEMBLY_API_KEY` |
+| 13. 동작 확인 방법 | `python main.py run --daily --source nars --dry-run` |
 | 14. 키 만료·갱신·회수 | 공식 문서 확인 필요 |
-| 15. 이용약관·자동수집 주의사항 | 공식 RSS 주소는 확인되지 않았습니다. 현재 엔드포인트는 공공데이터포털 경로이며, 2026-08-23 호출 결과 SERVICE_KEY_IS_NOT_REGISTERED_ERROR(403) 입니다. 같은 키로 prism 은 성공하므로 키가 아니라 **이 데이터셋의 활용신청 미승인**입니다. 주의: 활용신청은 endpoint 경로(9735000/PublicationService)를 소유한 데이터셋에 해야 합니다. 다른 NARS 데이터셋을 신청하면 403 이 그대로 남습니다. 확인된 NARS 계열 데이터셋: 15125976(연구보고서 입법·정책보고서), 15126137(제공자료 통합), 3037296(발간물). 대체 경로 후보 — 열린국회정보 open.assembly.go.kr/portal/openapi/{API_ID}. 운영자가 nvkfeqbsacvlzjmea 를 제시했으나 이 환경에서 도메인 접속이 차단되어 제공 데이터를 확인하지 못했습니다. 브라우저에서 ?KEY=sample&Type=json&pIndex=1&pSize=5 로 응답을 확인한 뒤 채택하십시오. 채택 시 인증키가 DATA_GO_KR_API_KEY 가 아니라 열린국회정보 전용 키(KEY 파라미터) 이므로 별도 환경변수가 필요합니다. |
-| 16. 공식 문서 최종 확인일 | 2026-08-22 |
+| 15. 이용약관·자동수집 주의사항 | **인증키가 공공데이터포털 키와 다릅니다.** 열린국회정보 전용 키를 발급받아 ASSEMBLY_API_KEY 로 등록하고, KEY 파라미터로 전달합니다. API 주소는 난수형 ID 를 씁니다(.../portal/openapi/{API_ID}). 응답 필드명은 아직 대조하지 못했으므로 첫 실행 로그에 찍히는 실제 응답 필드를 보고 sources.yaml 의 field_map 을 채우십시오. 브라우저에서 ?KEY=sample&Type=json&pIndex=1&pSize=5 로 미리 확인할 수 있습니다. 공공데이터포털 경로는 2026-08-23 기준 활용신청 미승인(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)이라 대체 경로로만 기록했습니다. |
+| 16. 공식 문서 최종 확인일 | 2026-08-23 |
 
 **설정된 엔드포인트**
-  - `https://apis.data.go.kr/9735000/PublicationService/getResearchReportList`
+  - `https://open.assembly.go.kr/portal/openapi/nvkfeqbsacvlzjmea`
 
-**수집 정책**: `download_policy: manual_review` / `robots_policy: respect` / `rate_limit_rps: 0.3`
+**수집 정책**: `download_policy: manual_review` / `robots_policy: respect` / `rate_limit_rps: 0.5`
 
 > ⚠ **구현 직전 재확인 필요** — 아래 접근방식은 공식 문서로 확정되지 않았습니다: OPEN_API
 
@@ -1015,6 +1016,7 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 | `KKNOWLEDGE_API_KEY` | 디지털집현전 (국가지식정보 통합플랫폼) OPEN_API 인증 | 필수 |
 | `DATA_GO_KR_API_KEY` | PRISM 정책연구관리시스템 OPEN_API 인증 | 필수 |
 | `LAW_GO_KR_OC` | 국가법령정보 공동활용 OPEN_API 인증 | 필수 |
+| `ASSEMBLY_API_KEY` | 국회입법조사처 OPEN_API 인증 | 필수 |
 | `CONTACT_EMAIL` | Crossref OPEN_API 인증 | 선택 |
 | `OPENALEX_API_KEY` | OpenAlex OPEN_API 인증 | 필수 |
 | `SEMANTIC_SCHOLAR_API_KEY` | Semantic Scholar OPEN_API 인증 | 선택 |

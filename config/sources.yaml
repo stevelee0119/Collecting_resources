@@ -344,50 +344,74 @@ sources:
 
   - source_id: nars
     name: "국회입법조사처"
-    base_domain: nars.go.kr
-    # 공식 RSS 대신 공공데이터포털 Open API 를 사용합니다(§4.1 우선순위 1).
-    connector: nars
+    base_domain: assembly.go.kr
+    # 열린국회정보(국회사무처 운영) 경로로 전환했습니다 (2026-08-23).
+    # 공공데이터포털 경로는 SERVICE_KEY_IS_NOT_REGISTERED_ERROR(403) 상태이며
+    # 아래 notes 에 대체 경로로 남겨 두었습니다.
+    connector: assembly_open
     mode: [FEED, QUERY]
     query_language: ko
     priority: 2
     enabled: true
     access_methods:
-      # 공공데이터포털 '국회사무처_국회입법조사처 연구보고서(NARS 현안분석)'(15125970).
-      # 엔드포인트는 운영자가 데이터셋 상세페이지에서 확인해 입력했습니다.
-      # 공식 명세를 직접 대조하지는 못했으므로 PENDING_VERIFICATION 을 유지합니다.
+      # 운영자가 제시한 열린국회정보 API 주소입니다.
+      # 이 개발 환경에서 해당 도메인 접속이 차단되어 제공 데이터·응답 필드를
+      # 직접 확인하지 못했으므로 PENDING_VERIFICATION 을 유지합니다.
+      # 확인: 브라우저에서 ?KEY=sample&Type=json&pIndex=1&pSize=5 호출
       - type: OPEN_API
         auth_type: API_KEY
         credential_required: true
-        credential_env_var: DATA_GO_KR_API_KEY
-        endpoint: "https://apis.data.go.kr/9735000/PublicationService/getResearchReportList"
+        credential_env_var: ASSEMBLY_API_KEY
+        endpoint: "https://open.assembly.go.kr/portal/openapi/nvkfeqbsacvlzjmea"
         verification_status: PENDING_VERIFICATION
-        verified_source: "https://www.data.go.kr/data/15125970/openapi.do"
+        verified_source: "https://open.assembly.go.kr/portal/openapi/openApiDevPage.do"
         verified_at: "2026-08-23"
         verified_method: operator_input
     credential_guide_required: true
-    auth_docs_url: "https://www.data.go.kr/data/15125970/openapi.do"
+    auth_docs_url: "https://open.assembly.go.kr/portal/openapi/openApiDevPage.do"
     contact_or_policy_url: "https://www.nars.go.kr/report/list.do?cmsCode=CM0043"
     robots_policy: respect
-    terms_checked_at: "2026-08-22"
-    last_policy_review_at: "2026-08-22"
+    terms_checked_at: "2026-08-23"
+    last_policy_review_at: "2026-08-23"
     download_policy: manual_review
-    rate_limit_rps: 0.3
+    rate_limit_rps: 0.5
     lookback_days: 7
+    max_page_size: 100
+    # 검색어 파라미터명이 확인되면 여기에 넣으십시오. 비워 두면 목록 전체를
+    # 받아 파이프라인이 주제·기간으로 거릅니다(FEED 성격).
+    assembly_query_param: ""
+    # API 마다 요구하는 고정 파라미터가 있으면 여기에 넣습니다.
+    assembly_static_params: {}
     landing_url_template: "https://www.nars.go.kr/report/view.do?cmsCode=CM0043&brdSeq={id}"
+    # 응답 필드명은 아직 대조하지 못했습니다. 제목을 못 읽으면 Connector 가
+    # 실제 응답 필드 목록을 경고 로그로 남기므로, 그 값을 보고 채우십시오.
+    field_map:
+      title: ""
+      authors: ""
+      publisher: ""
+      publication_date: ""
+      registered_date: ""
+      identifier: ""
+      landing_url: ""
+      download_url: ""
+      abstract: ""
+      document_type: ""
     notes: >-
-      공식 RSS 주소는 확인되지 않았습니다. 현재 엔드포인트는 공공데이터포털 경로이며,
-      2026-08-23 호출 결과 SERVICE_KEY_IS_NOT_REGISTERED_ERROR(403) 입니다.
-      같은 키로 prism 은 성공하므로 키가 아니라 **이 데이터셋의 활용신청 미승인**입니다.
-      주의: 활용신청은 endpoint 경로(9735000/PublicationService)를 소유한 데이터셋에
-      해야 합니다. 다른 NARS 데이터셋을 신청하면 403 이 그대로 남습니다.
+      [2026-08-23 열린국회정보로 전환]
+      인증키가 공공데이터포털 키와 다릅니다. 열린국회정보에서 별도 발급받아
+      ASSEMBLY_API_KEY 로 등록하십시오(계정당 최대 10개 발급, KEY 파라미터로 전달).
+      응답 구조는 { "<API_ID>": [ {head:[...]}, {row:[...]} ] } 형태가 관례이나
+      공식 문서로 대조하지 못해, Connector 가 row 목록을 관대하게 찾고 실패 시
+      실제 응답 키를 경고로 남기도록 했습니다. 첫 실행 로그를 보고 field_map 을
+      채우면 코드 수정 없이 동작합니다.
+      대체 경로(공공데이터포털): apis.data.go.kr/9735000/PublicationService/getResearchReportList
+      — 2026-08-23 호출 시 SERVICE_KEY_IS_NOT_REGISTERED_ERROR(403). 같은 키로
+      prism 은 성공하므로 키가 아니라 해당 데이터셋 활용신청 미승인입니다.
+      활용신청은 그 endpoint 경로를 소유한 데이터셋에 해야 합니다.
       확인된 NARS 계열 데이터셋: 15125976(연구보고서 입법·정책보고서),
       15126137(제공자료 통합), 3037296(발간물).
-      대체 경로 후보 — 열린국회정보 open.assembly.go.kr/portal/openapi/{API_ID}.
-      운영자가 nvkfeqbsacvlzjmea 를 제시했으나 이 환경에서 도메인 접속이 차단되어
-      제공 데이터를 확인하지 못했습니다. 브라우저에서
-      ?KEY=sample&Type=json&pIndex=1&pSize=5 로 응답을 확인한 뒤 채택하십시오.
-      채택 시 인증키가 DATA_GO_KR_API_KEY 가 아니라 열린국회정보 전용 키(KEY 파라미터)
-      이므로 별도 환경변수가 필요합니다.
+      되돌리려면 connector 를 nars 로, access_methods 를 위 공공데이터포털
+      주소와 DATA_GO_KR_API_KEY 로 바꾸면 됩니다.
 
   - source_id: jpri
     name: "사법정책연구원"
