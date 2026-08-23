@@ -30,6 +30,9 @@ TARGET_META: dict[str, tuple[str, str]] = {
     "admrul": ("지침", "행정규칙명"),
     "prec": ("판례", "사건명"),
     "expc": ("정책자료", "안건명"),
+    # 위원회 결정문 계열. 응답 필드명은 아직 대조하지 못해 제목 추출은
+    # _fallback_title() 의 일반 규칙에 맡깁니다.
+    "nhrck": ("결정문", "제목"),
 }
 
 
@@ -98,8 +101,15 @@ class LawOpenApiConnector(SourceConnector):
             or item.get("사건명")
             or item.get("안건명")
             or item.get("제목")
-        )
+        ) or _fallback_title(item)
         if not title:
+            # 어떤 필드가 실제로 오는지 알아야 TARGET_META 를 보완할 수 있습니다.
+            logger.warning(
+                "[%s] 제목 필드를 찾지 못했습니다 (target=%s). 응답 필드: %s",
+                self.config.source_id,
+                target,
+                sorted(k for k in item if not k.startswith("_")),
+            )
             return None
 
         identifier = clean_whitespace(
@@ -181,6 +191,25 @@ def _parse_law_xml(content: bytes) -> list[dict]:
             if record:
                 records.append(record)
     return records
+
+
+def _fallback_title(item: dict) -> str:
+    """알려지지 않은 target 의 제목 필드를 일반 규칙으로 추정합니다.
+
+    법제처 DRF 응답은 target 마다 필드명이 다릅니다(법령명한글·사건명·안건명 …).
+    확인되지 않은 target 이라도 수집이 멈추지 않도록, 이름이 `명`/`제목`으로
+    끝나는 필드 중 가장 긴 값을 제목으로 씁니다. 엔드포인트와 달리 이것은
+    응답 해석에 대한 보수적 추정이며, 틀려도 잘못된 요청을 보내지 않습니다.
+    """
+    candidates = [
+        clean_whitespace(value)
+        for key, value in item.items()
+        if not key.startswith("_")
+        and isinstance(value, str)
+        and (key.endswith("명") or key.endswith("제목"))
+        and "링크" not in key
+    ]
+    return max(candidates, key=len) if candidates else ""
 
 
 def _primary_date(record: dict) -> date | None:

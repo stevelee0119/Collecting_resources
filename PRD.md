@@ -178,10 +178,18 @@
 - **수집모드:** `QUERY / LINK_ONLY`
 - **원칙:** RISS 화면에서 보이는 “원문있음”과 실제 자동 다운로드 권한을 동일시하지 않는다.
 
-#### C. ScienceON / AccessON (KISTI)
+#### C. ScienceON / AccessON (KISTI) — *2026-08-23 수집 대상 제외 (보류)*
 - **접근방식:** ScienceON API Gateway의 공개 API, AccessON의 오픈액세스 검색 활용
 - **활용:** 국내외 학술논문·연구보고서의 메타데이터 및 OA 원문 후보 탐색
 - **수집모드:** `QUERY + OA_RESOLVER`
+- **제외 사유:** API Gateway가 **이용신청 시 제출한 맥주소에 인증을 묶는다.**
+  토큰 발급 요청은 `{mac_address, 현재일시}` JSON을 32자리 인증키로 AES256 암호화해
+  `client_id`와 함께 전송하고, Gateway가 복호화해 등록된 맥주소와 대조한 뒤에야
+  토큰을 발급한다. 실행마다 맥주소가 바뀌는 CI 러너에서는 인증이 성립하지 않는다.
+  고정 맥주소 서버 운영을 전제하지 않는 한 사용할 수 없어
+  `sources.yaml`의 `enabled: false`로 보류한다.
+- **재개 조건:** (1) 운영 서버 맥주소로 이용신청, (2) 토큰 발급 절차 구현
+  (AES256 암호화·만료 시 재발급), (3) `enabled: true`
 
 #### D. NKIS 국가정책연구포털
 - **접근방식:** 인증키 기반 공식 Open API
@@ -1053,6 +1061,7 @@ class SourceConnector:
 - [ ] NKIS Open API 수집 가능
 - [ ] 디지털집현전 Open API 수집 가능 *(2026-08-23 추가)*
 - [ ] 국가법령정보 공동활용 Open API 수집 가능
+- [ ] 국가인권위원회 결정문 수집 가능 (법령정보 DRF `target=nhrck`) *(2026-08-23 추가)*
 - [ ] Crossref/OpenAlex/Unpaywall 중 최소 2개 연동
 - [ ] SSRN 논문을 외부 학술 메타데이터를 통해 발견하고 공식 SSRN Landing Page 연결 가능
 - [ ] RISS는 Open API 승인 여부에 따라 API/Link-only로 동작 가능
@@ -1128,7 +1137,8 @@ class SourceConnector:
 2. **API/OAI-PMH/RSS가 있으면 HTML 크롤링보다 반드시 우선한다.**
 3. **SSRN·RISS는 중요하지만 접근정책과 원문 권리를 무시한 대량 다운로드 방식은 사용하지 않는다.**
 4. **원문이 제한되면 DOI·초록·공식 Landing Page만으로도 자료를 잃지 않도록 한다.**
-5. **OA 원문은 Unpaywall·CORE·OpenAlex·KCI·ScienceON·AccessON 등을 교차 조회하여 합법적 공개본을 최대한 찾는다.**
+5. **OA 원문은 Unpaywall·CORE·OpenAlex·KCI 등을 교차 조회하여 합법적 공개본을 최대한 찾는다.**
+   (ScienceON·AccessON은 2026-08-23 보류 — §4.2 C 참조)
 6. **다운로드 파일은 반드시 `260822_`와 같은 `YYMMDD_` 접두사를 사용한다.**
 7. **일자별 이력은 Manifest, 실제 파일은 주제별 저장소에 보관하여 중복을 방지한다.**
 8. **발행일·등록일·수정일·수집일을 분리하여 최신성 판단 오류를 줄인다.**

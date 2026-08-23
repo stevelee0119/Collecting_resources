@@ -435,7 +435,6 @@ CREDENTIAL_TARGETS = [
     ("kci", "OPEN_API", "KCI_API_KEY"),
     ("law_go_kr", "OPEN_API", "LAW_GO_KR_OC"),
     ("prism", "OPEN_API", "DATA_GO_KR_API_KEY"),
-    ("scienceon", "OPEN_API", "SCIENCEON_API_KEY"),
     ("core", "OPEN_API", "CORE_API_KEY"),
     ("openalex", "OPEN_API", "OPENALEX_API_KEY"),
     ("semantic_scholar", "OPEN_API", "SEMANTIC_SCHOLAR_API_KEY"),
@@ -453,8 +452,6 @@ def test_credential_env_var_reaches_the_request(
 
     secret = f"PROBE-{source_id.upper()}"
     monkeypatch.setenv(env_var, secret)
-    if source_id == "scienceon":
-        monkeypatch.setenv("SCIENCEON_CLIENT_ID", "PROBE-CLIENT")
 
     requests = credential_probe(source_id, method_type, date(2026, 8, 1), date(2026, 8, 22))
     assert requests, f"{source_id}: 요청이 전송되지 않았습니다."
@@ -469,18 +466,48 @@ def test_credential_env_var_reaches_the_request(
     )
 
 
-def test_scienceon_sends_client_id_with_token(monkeypatch, credential_probe):
-    """ScienceON 은 token 과 client_id 를 함께 보내야 합니다."""
+def test_humanrights_decisions_query_the_law_drf_with_nhrck(monkeypatch, credential_probe):
+    """국가인권위원회 결정문은 법령정보 DRF 를 target=nhrck 로 조회합니다.
+
+    target 코드는 운영자가 확인해 알려준 값입니다(2026-08-23).
+    인증은 공공데이터포털 키가 아니라 법령정보 공동활용의 OC 를 씁니다.
+    """
     from datetime import date
 
-    monkeypatch.setenv("SCIENCEON_API_KEY", "PROBE-TOKEN")
-    monkeypatch.setenv("SCIENCEON_CLIENT_ID", "PROBE-CLIENT")
-
-    requests = credential_probe("scienceon", "OPEN_API", date(2026, 8, 1), date(2026, 8, 22))
-    assert requests
+    monkeypatch.setenv("LAW_GO_KR_OC", "PROBE-OC")
+    requests = credential_probe("humanrights", "OPEN_API", date(2026, 8, 1), date(2026, 8, 23))
+    assert requests, "요청이 발생하지 않았습니다."
     queries = [r["query"] for r in requests]
-    assert any(q.get("token") == "PROBE-TOKEN" for q in queries), "token 미전송"
-    assert any(q.get("client_id") == "PROBE-CLIENT" for q in queries), "client_id 미전송"
+    assert any(q.get("target") == "nhrck" for q in queries), "target=nhrck 미전송"
+    assert any(q.get("OC") == "PROBE-OC" for q in queries), "OC 미전송"
+
+
+def test_scienceon_is_excluded_with_a_recorded_reason(registry):
+    """ScienceON 은 맥주소 기반 인증이라 수집 대상에서 제외했습니다.
+
+    이용신청 때 제출한 맥주소로 토큰을 발급하므로, 실행마다 맥주소가 바뀌는
+    Actions 러너에서는 인증이 불가능합니다. 제외 사실과 사유를 함께 남겨
+    나중에 이유 없이 되살아나지 않도록 합니다.
+    """
+    scienceon = registry.get("scienceon")
+    assert scienceon is not None, "기록 보존을 위해 소스 정의 자체는 남겨 둡니다."
+    assert not scienceon.enabled, "ScienceON 은 enabled: false 여야 합니다."
+    assert "맥주소" in scienceon.notes, "제외 사유가 notes 에 남아 있어야 합니다."
+    assert scienceon not in registry.enabled()
+
+
+def test_disabled_sources_are_not_wired_into_the_workflow(registry):
+    """제외한 소스의 Secret 은 워크플로가 주입하지 않아야 합니다."""
+    injected = set(_workflow_env())
+    for source in registry.sources:
+        if source.enabled:
+            continue
+        for method in source.access_methods:
+            if method.credential_env_var:
+                assert method.credential_env_var not in injected, (
+                    f"{source.source_id} 는 제외됐는데 "
+                    f"{method.credential_env_var} 를 아직 주입하고 있습니다."
+                )
 
 
 def test_missing_credential_is_not_sent_as_empty_string(monkeypatch, credential_probe):
@@ -502,7 +529,7 @@ WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "credential-check.yml"
 
 #: sources.yaml 에 없지만 프로그램이 읽는 환경변수
 EXTRA_ENV_VARS = {
-    "SCIENCEON_CLIENT_ID",
+    # SCIENCEON_CLIENT_ID 는 ScienceON 을 수집 대상에서 제외하면서 함께 뺐습니다.
     "DLRCIS_SENDER_EMAIL",
     "DLRCIS_RECEIVER_EMAIL",
     "DLRCIS_SMTP_PASSWORD",
@@ -526,7 +553,7 @@ def test_workflow_injects_every_env_var_the_program_reads(registry):
     """프로그램이 읽는 모든 환경변수를 워크플로가 주입해야 합니다."""
     needed = {
         m.credential_env_var
-        for s in registry.sources
+        for s in registry.enabled()
         for m in s.access_methods
         if m.credential_env_var
     } | EXTRA_ENV_VARS

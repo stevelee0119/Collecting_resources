@@ -69,23 +69,25 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         ),
     },
     "scienceon": {
-        "purpose_example": "국내외 학술논문·연구보고서 메타데이터 및 오픈액세스 원문 위치 탐색",
-        "account_required": "예 (KISTI 통합회원)",
-        "menu_path": (
-            "ScienceON → OpenAPI(por/oapi/openApi.do) 신청 → API Gateway"
-            "(apigateway/api/main/mainForm.do)에서 client_id 와 ACCESS_TOKEN 확인"
-        ),
-        "approval": UNKNOWN,
-        "pricing": UNKNOWN,
-        "scopes": "API 별 이용조건 확인 필요",
-        "redirect_uri": "불필요",
-        "test": "python main.py run --daily --source scienceon --dry-run",
-        "renewal": "토큰 만료일이 있으므로 API Gateway 에서 갱신 상태를 확인하십시오.",
+        "purpose_example": "(수집 대상 제외)",
+        "account_required": "해당 없음 — 2026-08-23 수집 대상에서 제외",
+        "menu_path": "해당 없음",
+        "approval": "해당 없음",
+        "pricing": "해당 없음",
+        "scopes": "해당 없음",
+        "redirect_uri": "해당 없음",
+        "test": "해당 없음 (enabled: false)",
+        "renewal": "해당 없음",
         "cautions": (
-            "인증에 client_id 와 token(ACCESS_TOKEN) 두 값이 모두 필요합니다 "
-            "(SCIENCEON_CLIENT_ID, SCIENCEON_API_KEY). 요청 파라미터는 "
-            "version/action/target/searchQuery/curPage/rowCount 이며 searchQuery 는 JSON 문자열입니다. "
-            "AccessON 오픈액세스 검색은 별도 이용조건이 적용될 수 있습니다."
+            "**2026-08-23 수집 대상에서 제외했습니다.** ScienceON API Gateway 는 "
+            "이용신청 때 제출한 맥주소에 인증을 묶습니다. 토큰 발급 요청은 "
+            "{mac_address, 현재일시} JSON 을 32자리 인증키로 AES256 암호화해 client_id 와 "
+            "함께 보내고, Gateway 가 복호화해 등록된 맥주소와 대조한 뒤에야 토큰을 내줍니다. "
+            "GitHub Actions 러너는 실행마다 맥주소가 달라져 등록값과 영구히 불일치하므로 "
+            "이 구성에서는 사용할 수 없습니다. 되살리려면 (1) 고정 맥주소 서버로 이용신청, "
+            "(2) 토큰 발급 절차(AES256 암호화·만료 시 재발급) 구현, "
+            "(3) sources.yaml 의 enabled: true 가 모두 필요합니다. "
+            "근거: https://scienceon.kisti.re.kr/apigateway/api/way/guide/tokenGuide.do"
         ),
     },
     "nkis": {
@@ -135,6 +137,30 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
             "여러 기관 자료를 모으는 집계 플랫폼이라 KCI·NKIS·법령정보와 자료가 겹칠 수 "
             "있으나 다단계 중복제거가 처리합니다. 원문은 원 기관 사이트에 있으므로 "
             "기본 정책은 link_only 이며, 기관별 이용조건 확인 후에만 다운로드로 전환하십시오."
+        ),
+    },
+    "humanrights": {
+        "purpose_example": "국가인권위원회 진정사건 결정문의 정기 수집 및 인권·군사법 쟁점 추적",
+        "account_required": "예 (국가법령정보 공동활용 신청 시 부여되는 OC)",
+        "menu_path": (
+            "국가법령정보 공동활용 → 오픈API 신청. law_go_kr 과 같은 OC 를 사용하므로 "
+            "이미 발급받았다면 추가 발급은 필요 없습니다."
+        ),
+        "approval": "신청 후 승인 (승인 시 OC 식별자 부여)",
+        "pricing": UNKNOWN,
+        "scopes": "신청 범위에 위원회 결정문이 포함되는지 확인이 필요할 수 있습니다.",
+        "redirect_uri": "불필요",
+        "test": "python main.py run --daily --source humanrights --dry-run",
+        "renewal": UNKNOWN,
+        "cautions": (
+            "결정문은 위원회가 아니라 법제처가 개방합니다. 운영자가 확인한 target 코드는 "
+            "nhrck 이며, 요청 형태는 "
+            "https://www.law.go.kr/DRF/lawSearch.do?OC=<OC>&target=nhrck&type=XML 입니다. "
+            "응답 필드명은 아직 대조하지 못했습니다 — 제목을 읽지 못하면 Connector 가 실제 "
+            "응답 필드 목록을 경고 로그로 남기므로, 그 값을 보고 law_openapi 의 TARGET_META 를 "
+            "보완하십시오. 발간물·연구보고서는 인권도서관(library.humanrights.go.kr)에 있으며 "
+            "공식 RSS 가 확인되지 않아 아직 수집하지 않습니다. 한 소스는 Connector 하나만 "
+            "쓰므로, RSS 주소를 찾으면 별도 소스로 분리해야 합니다."
         ),
     },
     "prism": {
@@ -352,9 +378,8 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 
 
 #: 인증정보가 실제로 설정되었는지 확인할 때 함께 필요한 부가 환경변수
-COMPANION_ENV_VARS: dict[str, list[str]] = {
-    "scienceon": ["SCIENCEON_CLIENT_ID"],
-}
+# ScienceON 제외로 현재 동반 환경변수가 필요한 소스는 없습니다.
+COMPANION_ENV_VARS: dict[str, list[str]] = {}
 
 
 def _action_status(source: Any, method: Any) -> tuple[str, str]:
@@ -364,6 +389,9 @@ def _action_status(source: Any, method: Any) -> tuple[str, str]:
         (상태 아이콘+라벨, 남은 조치 설명)
     """
     from src.config_loader import get_secret  # noqa: PLC0415
+
+    if not source.enabled:
+        return "⛔ 제외", "수집 대상에서 제외된 소스입니다. 인증정보를 등록할 필요가 없습니다."
 
     needs_key = method.credential_required and method.credential_env_var
     has_key = bool(get_secret(method.credential_env_var)) if needs_key else True
@@ -605,6 +633,7 @@ STATUS_SUMMARY_PLACEHOLDER
 | 🟡 일부 완료 | 인증정보 일부만 설정됨 — 남은 값을 추가해야 동작 |
 | ⬜ 조치 필요 | 발급·엔드포인트 입력이 필요하거나, 값이 이 환경에 전달되지 않음 |
 | ➖ 대상 아님 | 공식적으로 자동수집 대상이 아님 (추가 조치 불필요) |
+| ⛔ 제외 | 운영 판단으로 수집 대상에서 제외 (사유는 소스별 상세 참조) |
 
 ---
 
@@ -749,7 +778,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
     keyless_rows = "\n".join(_keyless_row(s) for s in keyless) or "- (없음)"
 
     # 조치 현황 요약
-    done, partial, todo_list, na = [], [], [], []
+    done, partial, todo_list, na, excluded = [], [], [], [], []
     for source in registry.sources:
         for method in source.access_methods:
             status, todo = _action_status(source, method)
@@ -760,6 +789,8 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
                 partial.append(f"{label} — {todo}")
             elif status.startswith("➖"):
                 na.append(label)
+            elif status.startswith("⛔"):
+                excluded.append(label)
             else:
                 todo_list.append(f"{label} — {todo}")
 
@@ -782,6 +813,10 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
         f"**➖ 자동수집 대상 아님 ({len(na)}건)** — 조치 불필요",
         "",
         bullets(na),
+        "",
+        f"**⛔ 수집 대상 제외 ({len(excluded)}건)** — 운영 판단으로 제외, 조치 불필요",
+        "",
+        bullets(excluded),
     ])
 
     # 이 문서를 어떤 환경에서 생성했는지 명시합니다.
@@ -807,7 +842,9 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
             if not var or var in seen_names:
                 continue
             seen_names.add(var)
-            if not method.endpoint:
+            if not source.enabled:
+                required = "⛔ 불필요 (수집 대상 제외)"
+            elif not method.endpoint:
                 # 엔드포인트가 없으면 키가 있어도 호출하지 않습니다.
                 required = "➖ 불필요 (엔드포인트 미확정)"
             elif method.credential_required:
@@ -816,7 +853,6 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
                 required = "선택 (있으면 쿼터·속도 유리)"
             secret_rows.append(f"| `{var}` | {source.name} {method.type} | {required} |")
     for var, purpose, required in (
-        ("SCIENCEON_CLIENT_ID", "ScienceON client_id (token 과 함께 필요)", "✅ ScienceON 사용 시 필수"),
         ("DLRCIS_SENDER_EMAIL", "브리핑 발신 주소", "✅ 알림 사용 시 필수"),
         ("DLRCIS_RECEIVER_EMAIL", "브리핑 수신 주소", "✅ 알림 사용 시 필수"),
         ("DLRCIS_SMTP_PASSWORD", "Gmail 앱 비밀번호", "✅ SMTP 사용 시 필수"),
@@ -862,10 +898,11 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
             if not var or var in seen:
                 continue
             seen.add(var)
-            body.append(
-                f"| `{var}` | {source.name} {method.type} 인증 | "
-                f"{'필수' if method.credential_required else '선택'} |"
-            )
+            if not source.enabled:
+                required = "불필요 (수집 대상 제외)"
+            else:
+                required = "필수" if method.credential_required else "선택"
+            body.append(f"| `{var}` | {source.name} {method.type} 인증 | {required} |")
     for var, purpose, required in (
         ("CONTACT_EMAIL", "Crossref/OpenAlex polite pool, Unpaywall 필수 파라미터", "권장"),
         ("DLRCIS_SENDER_EMAIL", "브리핑 발신 주소", "필수"),

@@ -29,10 +29,9 @@
 
 - (없음)
 
-**⬜ 추가 조치 필요 (17건)**
+**⬜ 추가 조치 필요 (16건)**
 
 - KCI 한국학술지인용색인 (`kci` / OPEN_API) — 발급 후 `.env` 에 `KCI_API_KEY` 설정
-- ScienceON (KISTI) (`scienceon` / OPEN_API) — 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정
 - NKIS 국가정책연구포털 (`nkis` / OPEN_API) — 발급 후 `.env` 에 `NKIS_API_KEY` 설정
 - 디지털집현전 (국가지식정보 통합플랫폼) (`kknowledge` / OPEN_API) — 발급 후 `.env` 에 `KKNOWLEDGE_API_KEY` 설정
 - PRISM 정책연구관리시스템 (`prism` / OPEN_API) — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
@@ -43,7 +42,7 @@
 - 한국형사·법무정책연구원 (`kicj` / RSS) — 공식 문서(https://www.kicj.re.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 한국형사·법무정책연구원 (`kicj` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - 국가인권위원회 (`humanrights` / RSS) — 공식 문서(https://library.humanrights.go.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
-- 국가인권위원회 (`humanrights` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15141147/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 국가인권위원회 (`humanrights` / OPEN_API) — 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정
 - 한국국방연구원 (KIDA) (`kida` / RSS) — 공식 문서(https://kida.re.kr/frt/contents/frtContents.do?sidx=2127&depth=3)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - OpenAlex (`openalex` / OPEN_API) — 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정
 - CORE (`core` / OPEN_API) — 발급 후 `.env` 에 `CORE_API_KEY` 설정
@@ -54,6 +53,10 @@
 - RISS 학술연구정보서비스 (`riss` / OPEN_API)
 - SSRN (`ssrn` / NONE)
 
+**⛔ 수집 대상 제외 (1건)** — 운영 판단으로 제외, 조치 불필요
+
+- ScienceON (KISTI) (`scienceon` / OPEN_API)
+
 ### 상태 표시의 의미
 
 | 표시 | 의미 |
@@ -62,6 +65,7 @@
 | 🟡 일부 완료 | 인증정보 일부만 설정됨 — 남은 값을 추가해야 동작 |
 | ⬜ 조치 필요 | 발급·엔드포인트 입력이 필요하거나, 값이 이 환경에 전달되지 않음 |
 | ➖ 대상 아님 | 공식적으로 자동수집 대상이 아님 (추가 조치 불필요) |
+| ⛔ 제외 | 운영 판단으로 수집 대상에서 제외 (사유는 소스별 상세 참조) |
 
 ---
 
@@ -107,7 +111,7 @@ Secrets 이름을 이와 동일하게 맞추면 워크플로에서 그대로 매
 | --- | --- | --- |
 | `KCI_API_KEY` | KCI 한국학술지인용색인 OPEN_API | ✅ 필수 |
 | `RISS_API_KEY` | RISS 학술연구정보서비스 OPEN_API | ➖ 불필요 (엔드포인트 미확정) |
-| `SCIENCEON_API_KEY` | ScienceON (KISTI) OPEN_API | ✅ 필수 |
+| `SCIENCEON_API_KEY` | ScienceON (KISTI) OPEN_API | ⛔ 불필요 (수집 대상 제외) |
 | `NKIS_API_KEY` | NKIS 국가정책연구포털 OPEN_API | ✅ 필수 |
 | `KKNOWLEDGE_API_KEY` | 디지털집현전 (국가지식정보 통합플랫폼) OPEN_API | ✅ 필수 |
 | `DATA_GO_KR_API_KEY` | PRISM 정책연구관리시스템 OPEN_API | ✅ 필수 |
@@ -118,7 +122,6 @@ Secrets 이름을 이와 동일하게 맞추면 워크플로에서 그대로 매
 | `CORE_API_KEY` | CORE OPEN_API | ✅ 필수 |
 | `DOAJ_API_KEY` | DOAJ OPEN_API | 선택 (있으면 쿼터·속도 유리) |
 | `ZENODO_API_KEY` | Zenodo OPEN_API | 선택 (있으면 쿼터·속도 유리) |
-| `SCIENCEON_CLIENT_ID` | ScienceON client_id (token 과 함께 필요) | ✅ ScienceON 사용 시 필수 |
 | `DLRCIS_SENDER_EMAIL` | 브리핑 발신 주소 | ✅ 알림 사용 시 필수 |
 | `DLRCIS_RECEIVER_EMAIL` | 브리핑 수신 주소 | ✅ 알림 사용 시 필수 |
 | `DLRCIS_SMTP_PASSWORD` | Gmail 앱 비밀번호 | ✅ SMTP 사용 시 필수 |
@@ -192,14 +195,14 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | --- | --- | --- | --- | --- |
 | KCI 한국학술지인용색인 (`kci`) | OPEN_API / API Key 필요 | `KCI_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `KCI_API_KEY` 설정 |
 | RISS 학술연구정보서비스 (`riss`) | OPEN_API / 기관 승인 필요 | `RISS_API_KEY` | ➖ 대상 아님 | 자동수집 대상이 아닙니다. 추가 조치 불필요. |
-| ScienceON (KISTI) (`scienceon`) | OPEN_API / API Key 필요 | `SCIENCEON_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정 |
+| ScienceON (KISTI) (`scienceon`) | OPEN_API / API Key 필요 | `SCIENCEON_API_KEY` | ⛔ 제외 | 수집 대상에서 제외된 소스입니다. 인증정보를 등록할 필요가 없습니다. |
 | NKIS 국가정책연구포털 (`nkis`) | OPEN_API / API Key 필요 | `NKIS_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `NKIS_API_KEY` 설정 |
 | 디지털집현전 (국가지식정보 통합플랫폼) (`kknowledge`) | OPEN_API / API Key 필요 | `KKNOWLEDGE_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `KKNOWLEDGE_API_KEY` 설정 |
 | PRISM 정책연구관리시스템 (`prism`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정 |
 | 국가법령정보 공동활용 (`law_go_kr`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | ⬜ 조치 필요 | 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정 |
 | 국회입법조사처 (`nars`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정 |
 | 한국형사·법무정책연구원 (`kicj`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
-| 국가인권위원회 (`humanrights`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15141147/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
+| 국가인권위원회 (`humanrights`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | ⬜ 조치 필요 | 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정 |
 | OpenAlex (`openalex`) | OPEN_API / API Key 필요 | `OPENALEX_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정 |
 | Semantic Scholar (`semantic_scholar`) | OPEN_API / API Key 필요 | `SEMANTIC_SCHOLAR_API_KEY` | ✅ 완료 | 별도 발급 없이 사용 가능 |
 | CORE (`core`) | OPEN_API / API Key 필요 | `CORE_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `CORE_API_KEY` 설정 |
@@ -291,7 +294,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### ScienceON (KISTI) (`scienceon`)
 
-- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정
+- **조치 현황: ⛔ 제외** — 수집 대상에서 제외된 소스입니다. 인증정보를 등록할 필요가 없습니다.
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `SCIENCEON_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://scienceon.kisti.re.kr/apigateway/api/way/service/arti/serviceArtiSearchApi.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -301,17 +304,17 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | 2. 사용 API/인증방식 | OPEN_API(API Key 필요) |
 | 3. 사전 발급 필요 여부 | 예 |
 | 4. 공식 발급/신청 페이지 | https://scienceon.kisti.re.kr/apigateway/api/main/mainForm.do |
-| 5. 계정 생성 필요 여부 | 예 (KISTI 통합회원) |
-| 6. 신청 메뉴 경로 | ScienceON → OpenAPI(por/oapi/openApi.do) 신청 → API Gateway(apigateway/api/main/mainForm.do)에서 client_id 와 ACCESS_TOKEN 확인 |
-| 7. 서비스 목적 예시 | 국내외 학술논문·연구보고서 메타데이터 및 오픈액세스 원문 위치 탐색 |
-| 8. 승인 절차 | 공식 문서 확인 필요 |
-| 9. 무료/유료 및 쿼터 | 공식 문서 확인 필요 |
-| 10. OAuth Scope/권한 | API 별 이용조건 확인 필요 |
-| 11. Redirect URI 필요 여부 | 불필요 |
+| 5. 계정 생성 필요 여부 | 해당 없음 — 2026-08-23 수집 대상에서 제외 |
+| 6. 신청 메뉴 경로 | 해당 없음 |
+| 7. 서비스 목적 예시 | (수집 대상 제외) |
+| 8. 승인 절차 | 해당 없음 |
+| 9. 무료/유료 및 쿼터 | 해당 없음 |
+| 10. OAuth Scope/권한 | 해당 없음 |
+| 11. Redirect URI 필요 여부 | 해당 없음 |
 | 12. 환경변수명 | `SCIENCEON_API_KEY` |
-| 13. 동작 확인 방법 | `python main.py run --daily --source scienceon --dry-run` |
-| 14. 키 만료·갱신·회수 | 토큰 만료일이 있으므로 API Gateway 에서 갱신 상태를 확인하십시오. |
-| 15. 이용약관·자동수집 주의사항 | 인증에 client_id 와 token(ACCESS_TOKEN) 두 값이 모두 필요합니다 (SCIENCEON_CLIENT_ID, SCIENCEON_API_KEY). 요청 파라미터는 version/action/target/searchQuery/curPage/rowCount 이며 searchQuery 는 JSON 문자열입니다. AccessON 오픈액세스 검색은 별도 이용조건이 적용될 수 있습니다. |
+| 13. 동작 확인 방법 | `해당 없음 (enabled: false)` |
+| 14. 키 만료·갱신·회수 | 해당 없음 |
+| 15. 이용약관·자동수집 주의사항 | **2026-08-23 수집 대상에서 제외했습니다.** ScienceON API Gateway 는 이용신청 때 제출한 맥주소에 인증을 묶습니다. 토큰 발급 요청은 {mac_address, 현재일시} JSON 을 32자리 인증키로 AES256 암호화해 client_id 와 함께 보내고, Gateway 가 복호화해 등록된 맥주소와 대조한 뒤에야 토큰을 내줍니다. GitHub Actions 러너는 실행마다 맥주소가 달라져 등록값과 영구히 불일치하므로 이 구성에서는 사용할 수 없습니다. 되살리려면 (1) 고정 맥주소 서버로 이용신청, (2) 토큰 발급 절차(AES256 암호화·만료 시 재발급) 구현, (3) sources.yaml 의 enabled: true 가 모두 필요합니다. 근거: https://scienceon.kisti.re.kr/apigateway/api/way/guide/tokenGuide.do |
 | 16. 공식 문서 최종 확인일 | 2026-08-22 |
 
 **설정된 엔드포인트**
@@ -597,33 +600,33 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 - **조치 현황: ⬜ 조치 필요** — 공식 문서(https://library.humanrights.go.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://library.humanrights.go.kr/ (2026-08-22, 공식 문서 검색결과 기준)
-- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.data.go.kr/data/15141147/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
-- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `DATA_GO_KR_API_KEY` / 확인상태: `PENDING_VERIFICATION`
-  - 확인근거: https://www.data.go.kr/data/15141147/openapi.do (2026-08-23, 공식 문서 검색결과 기준)
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정
+- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `LAW_GO_KR_OC` / 확인상태: `PENDING_VERIFICATION`
+  - 확인근거: https://open.law.go.kr/LSO/openApi/guideList.do (2026-08-23, 운영자가 직접 입력 (공식 문서 대조 전))
 
 | 항목 | 내용 |
 | --- | --- |
 | 1. 서비스/기관명 | 국가인권위원회 |
 | 2. 사용 API/인증방식 | RSS(불필요), OPEN_API(API Key 필요) |
 | 3. 사전 발급 필요 여부 | 예 |
-| 4. 공식 발급/신청 페이지 | https://www.data.go.kr/data/15141147/openapi.do |
-| 5. 계정 생성 필요 여부 | 공식 문서 확인 필요 |
-| 6. 신청 메뉴 경로 | 공식 문서 확인 필요 |
-| 7. 서비스 목적 예시 | 공식 문서 확인 필요 |
-| 8. 승인 절차 | 공식 문서 확인 필요 |
+| 4. 공식 발급/신청 페이지 | https://open.law.go.kr/LSO/openApi/guideList.do |
+| 5. 계정 생성 필요 여부 | 예 (국가법령정보 공동활용 신청 시 부여되는 OC) |
+| 6. 신청 메뉴 경로 | 국가법령정보 공동활용 → 오픈API 신청. law_go_kr 과 같은 OC 를 사용하므로 이미 발급받았다면 추가 발급은 필요 없습니다. |
+| 7. 서비스 목적 예시 | 국가인권위원회 진정사건 결정문의 정기 수집 및 인권·군사법 쟁점 추적 |
+| 8. 승인 절차 | 신청 후 승인 (승인 시 OC 식별자 부여) |
 | 9. 무료/유료 및 쿼터 | 공식 문서 확인 필요 |
-| 10. OAuth Scope/권한 | 해당 없음 |
+| 10. OAuth Scope/권한 | 신청 범위에 위원회 결정문이 포함되는지 확인이 필요할 수 있습니다. |
 | 11. Redirect URI 필요 여부 | 불필요 |
-| 12. 환경변수명 | `DATA_GO_KR_API_KEY` |
-| 13. 동작 확인 방법 | `python main.py doctor` |
+| 12. 환경변수명 | `LAW_GO_KR_OC` |
+| 13. 동작 확인 방법 | `python main.py run --daily --source humanrights --dry-run` |
 | 14. 키 만료·갱신·회수 | 공식 문서 확인 필요 |
-| 15. 이용약관·자동수집 주의사항 | 자료가 두 경로로 나뉩니다. (1) 발간물·연구보고서 — 인권도서관(library.humanrights.go.kr). 공식 RSS 가 확인되지 않아 자동수집 전 robots.txt 와 이용약관 확인이 필요합니다. (2) 진정사건 결정문 — 법제처가 공공데이터포털에 개방한 '국가인권위원회 결정문 목록 조회'(15141147) / '결정문 본문 조회'(15141148) API. DATA_GO_KR_API_KEY 로 활용신청을 하면 상세 명세가 나오므로, 그때 endpoint 와 request/field_map 을 채우십시오. 2026-08-23 재확인에서도 두 데이터셋의 상세주소(및 law.go.kr DRF 의 target 코드)는 공개 검색으로 확인되지 않았습니다. |
+| 15. 이용약관·자동수집 주의사항 | 결정문은 위원회가 아니라 법제처가 개방합니다. 운영자가 확인한 target 코드는 nhrck 이며, 요청 형태는 https://www.law.go.kr/DRF/lawSearch.do?OC=<OC>&target=nhrck&type=XML 입니다. 응답 필드명은 아직 대조하지 못했습니다 — 제목을 읽지 못하면 Connector 가 실제 응답 필드 목록을 경고 로그로 남기므로, 그 값을 보고 law_openapi 의 TARGET_META 를 보완하십시오. 발간물·연구보고서는 인권도서관(library.humanrights.go.kr)에 있으며 공식 RSS 가 확인되지 않아 아직 수집하지 않습니다. 한 소스는 Connector 하나만 쓰므로, RSS 주소를 찾으면 별도 소스로 분리해야 합니다. |
 | 16. 공식 문서 최종 확인일 | 2026-08-22 |
 
 **설정된 엔드포인트**
-  - (미설정)
+  - `https://www.law.go.kr/DRF/lawSearch.do`
 
-**수집 정책**: `download_policy: manual_review` / `robots_policy: respect` / `rate_limit_rps: 0.3`
+**수집 정책**: `download_policy: link_only` / `robots_policy: respect` / `rate_limit_rps: 1.0`
 
 > ⚠ **구현 직전 재확인 필요** — 아래 접근방식은 공식 문서로 확정되지 않았습니다: RSS, OPEN_API
 
@@ -1007,7 +1010,7 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 | --- | --- | --- |
 | `KCI_API_KEY` | KCI 한국학술지인용색인 OPEN_API 인증 | 필수 |
 | `RISS_API_KEY` | RISS 학술연구정보서비스 OPEN_API 인증 | 필수 |
-| `SCIENCEON_API_KEY` | ScienceON (KISTI) OPEN_API 인증 | 필수 |
+| `SCIENCEON_API_KEY` | ScienceON (KISTI) OPEN_API 인증 | 불필요 (수집 대상 제외) |
 | `NKIS_API_KEY` | NKIS 국가정책연구포털 OPEN_API 인증 | 필수 |
 | `KKNOWLEDGE_API_KEY` | 디지털집현전 (국가지식정보 통합플랫폼) OPEN_API 인증 | 필수 |
 | `DATA_GO_KR_API_KEY` | PRISM 정책연구관리시스템 OPEN_API 인증 | 필수 |
