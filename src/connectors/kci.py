@@ -24,6 +24,7 @@ from ..normalizers.normalize import (
     normalize_doi,
     parse_date,
 )
+from ..http_client import describe_http_error
 from .base import EndpointNotConfiguredError, SourceConnector
 from .oai_pmh import OaiPmhClient, OaiPmhError
 
@@ -109,7 +110,8 @@ class KciConnector(SourceConnector):
                     records = _parse_kci_xml(response.content)
                 except Exception as exc:
                     logger.warning(
-                        "[kci] Open API 질의 실패 (%s, %d년): %s", query.query_string, year, exc
+                        "[kci] Open API 질의 실패 (%d년): %s (질의: %.40s)",
+                        year, describe_http_error(exc), query.query_string,
                     )
                     continue
 

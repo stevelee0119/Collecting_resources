@@ -17,9 +17,11 @@ robots.txt 도 중복으로 읽으며, 동일한 요청이 두 번 나갈 수 �
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
 import urllib.robotparser
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlparse
@@ -289,6 +291,7 @@ class PoliteClient:
         respect_robots: bool = True,
         robots: RobotsCache | None = None,
         shared: SharedHostState | None = None,
+        api_endpoints: Sequence[str] = (),
     ):
         self.user_agent = user_agent
         self.timeout = timeout
@@ -301,6 +304,9 @@ class PoliteClient:
         self.shared = shared
         self.robots = robots or (shared.robots if shared else RobotsCache(user_agent))
         self.rate_limit_rps = rate_limit_rps
+        # sources.yaml 에 공식 API 로 등록된 엔드포인트. robots.txt 는 크롤러 지침이며
+        # 기관이 스스로 제공하는 API 를 겨냥한 것이 아니므로 여기에만 예외를 둡니다.
+        self.api_endpoints = tuple(e for e in api_endpoints if e)
         self.limiter = RateLimiter(rate_limit_rps)
         self.breaker = CircuitBreaker()
         self.cache = ConditionalCache()
@@ -333,8 +339,9 @@ class PoliteClient:
         **kwargs: Any,
     ) -> httpx.Response:
         """재시도·rate limit·robots 검사를 적용한 요청."""
-        if self.respect_robots and not self.robots.allowed(url):
-            raise RobotsDisallowedError(f"robots.txt 가 수집을 허용하지 않습니다: {url}")
+        if self.respect_robots and not self._is_registered_api(url):
+            if not self.robots.allowed(url):
+                raise RobotsDisallowedError(f"robots.txt 가 수집을 허용하지 않습니다: {url}")
 
         self.breaker.before_call()
 
@@ -418,6 +425,22 @@ class PoliteClient:
         return self.request("HEAD", url, **kwargs)
 
     # -- helpers -----------------------------------------------------------
+    def _is_registered_api(self, url: str) -> bool:
+        """sources.yaml 에 공식 API 로 등록된 엔드포인트인지 확인합니다.
+
+        robots.txt(RFC 9309)는 **크롤러**에 대한 지침입니다. 기관이 문서를 갖춰
+        제공하는 REST/OAI-PMH 엔드포인트는 그 기관이 만들어 둔 정식 접근 경로이고,
+        이용조건도 API 약관이 따로 규정합니다. 실제로 arXiv·Zenodo 처럼 사이트
+        robots.txt 가 광범위하게 Disallow 를 걸어 두어 **자신들의 공식 API 까지
+        막히는** 경우가 있습니다.
+
+        그래서 예외는 `sources.yaml` 의 access_methods 에 OPEN_API / OAI_PMH /
+        REST_API 로 **명시 등록된 엔드포인트에만** 적용합니다. 임의의 URL 이나
+        HTML·RSS 경로에는 적용되지 않으므로, 로그인·Paywall·anti-bot 우회
+        금지(PRD §7.3)와는 무관합니다.
+        """
+        return any(url.startswith(endpoint) for endpoint in self.api_endpoints)
+
     def _memo_key(self, method: str, url: str, headers: dict, kwargs: dict) -> tuple:
         """요청을 식별하는 키. 파라미터까지 포함한 최종 URL 로 만듭니다.
 
@@ -454,6 +477,73 @@ class PoliteClient:
             return None
 
 
+def describe_http_error(exc: BaseException, *, body_chars: int = 240) -> str:
+    """진단에 필요한 것만 남긴 오류 설명.
+
+    httpx 의 기본 메시지는 상태코드와 URL 만 담고 **응답 본문을 버립니다.**
+    그런데 어디가 잘못됐는지는 대부분 본문에 있습니다(Crossref 는 잘못된 filter
+    이름을, DOAJ·CORE 는 사유를 돌려줍니다). 로그가 잘려도 원인이 먼저 보이도록
+    `HTTP 400 api.crossref.org — {본문}` 형태로 정리합니다.
+    """
+    response = getattr(exc, "response", None)
+    if response is None:
+        return f"{type(exc).__name__}: {exc}"
+
+    host = urlparse(str(response.url)).netloc
+    body = ""
+    try:
+        body = " ".join(response.text.split())[:body_chars]
+    except Exception:  # noqa: BLE001 - 본문을 읽을 수 없으면 상태코드만 씁니다.
+        body = ""
+    detail = f" — {body}" if body else ""
+    return f"HTTP {response.status_code} {host}{detail}"
+
+
+#: config.yaml 의 user_agent 에 들어 있는 연락처 자리표시자.
+USER_AGENT_EMAIL_PLACEHOLDER = "CONTACT_EMAIL_HERE"
+
+
+def resolve_user_agent(app_config: Any) -> str:
+    """User-Agent 의 연락처 자리표시자를 실제 이메일로 바꿉니다.
+
+    PRD §18.2(Polite Harvesting)는 User-Agent 에 관리자 연락처를 넣도록 합니다.
+    그런데 자리표시자가 치환되지 않으면 `+mailto:CONTACT_EMAIL_HERE` 가 **그대로**
+    전송됩니다. 연락처 역할을 못 할 뿐 아니라, 'Bot' 이라는 문구와 가짜 메일주소가
+    함께 있는 UA 는 방화벽이 차단하기 쉬운 형태입니다.
+
+    CONTACT_EMAIL 이 없으면 자리표시자를 남기지 않고 연락처 절을 통째로 뺍니다.
+    """
+    from .config_loader import get_secret  # noqa: PLC0415 - 순환 import 방지
+
+    raw = str(app_config.get("http.user_agent", "DL-RCIS/2.1"))
+    if USER_AGENT_EMAIL_PLACEHOLDER not in raw:
+        return raw
+
+    email = get_secret("CONTACT_EMAIL")
+    if email:
+        return raw.replace(USER_AGENT_EMAIL_PLACEHOLDER, email)
+
+    # 연락처가 없으면 "; +mailto:...)" 부분을 제거하고 괄호를 닫습니다.
+    cleaned = re.sub(r"[;,]?\s*\+?mailto:" + re.escape(USER_AGENT_EMAIL_PLACEHOLDER), "", raw)
+    return cleaned.replace("()", "").strip()
+
+
+#: robots.txt 예외를 적용할 접근수단. 기관이 문서화해 제공하는 프로그래매틱 경로입니다.
+OFFICIAL_API_METHOD_TYPES = ("OPEN_API", "OAI_PMH", "REST_API")
+
+
+def official_api_endpoints(source: Any) -> list[str]:
+    """소스에 등록된 공식 API 엔드포인트 목록."""
+    endpoints: list[str] = []
+    for method in getattr(source, "access_methods", []) or []:
+        if str(getattr(method, "type", "")) not in OFFICIAL_API_METHOD_TYPES:
+            continue
+        for attr in ("endpoint", "detail_endpoint"):
+            if value := getattr(method, attr, ""):
+                endpoints.append(str(value))
+    return endpoints
+
+
 def build_client(
     app_config: Any, source: Any, shared: SharedHostState | None = None
 ) -> PoliteClient:
@@ -464,7 +554,8 @@ def build_client(
     """
     return PoliteClient(
         shared=shared,
-        user_agent=app_config.get("http.user_agent", "DL-RCIS/2.1"),
+        api_endpoints=official_api_endpoints(source),
+        user_agent=resolve_user_agent(app_config),
         rate_limit_rps=float(getattr(source, "rate_limit_rps", 0.5)),
         timeout=float(app_config.get("http.timeout_seconds", 30)),
         download_timeout=float(app_config.get("http.download_timeout_seconds", 120)),

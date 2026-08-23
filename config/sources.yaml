@@ -659,6 +659,10 @@ sources:
     lookback_days: 3
     # 대량 결과는 cursor 페이지네이션 사용 (§4.4 B)
     use_cursor: true
+    # 증분 조회에 쓰는 날짜 필터. from_updated_date 는 Premium 전용이므로
+    # 기본값은 모든 키가 쓸 수 있는 from_created_date 입니다.
+    # Premium 구독 중이면 from_updated_date 로 바꾸면 수정본까지 잡습니다.
+    openalex_date_filter: "from_created_date"
     notes: >-
       2026-02-13 부터 API Key 가 필수이며 polite pool(mailto)은 폐지되었습니다.
       키가 없으면 시험용 무료 크레딧 소진 후 409 를 반환하므로 반드시 발급받으십시오.

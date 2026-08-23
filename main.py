@@ -329,8 +329,8 @@ def _probe_sources(settings) -> None:
 
             if capture.messages:
                 # 탐색 중 경고가 있었다면 인증·요청 문제일 가능성이 높습니다.
-                reason = capture.messages[0]
-                print(f"  [실패  ] {source.source_id:<18} {reason[:110]}")
+                reason = " ".join(capture.messages[0].split())
+                print(f"  [실패  ] {source.source_id:<18} {reason[:200]}")
                 failed += 1
             elif items:
                 print(f"  [성공  ] {source.source_id:<18} 응답 수신 (레코드 확인됨)")

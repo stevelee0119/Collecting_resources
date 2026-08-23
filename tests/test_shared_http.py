@@ -169,3 +169,141 @@ def test_large_response_is_not_memoized(counting_server):
 
     assert shared.stats.deduplicated_requests == 0
     client.close()
+
+
+# ---------------------------------------------------------------------------
+# robots.txt 예외 — 등록된 공식 API 엔드포인트에만 적용
+# ---------------------------------------------------------------------------
+
+class _RobotsDenyAll:
+    """모든 경로를 거부하는 robots 캐시 대역."""
+
+    def allowed(self, url: str) -> bool:
+        return False
+
+
+def test_registered_api_endpoint_is_exempt_from_robots(counting_server):
+    """공식 API 로 등록된 엔드포인트는 robots.txt 로 막지 않습니다.
+
+    arXiv·Zenodo 처럼 사이트 robots.txt 가 광범위하게 Disallow 를 걸어 두면
+    기관이 스스로 제공하는 API 까지 막힙니다.
+    """
+    server, base = counting_server
+    api = f"{base}/api/query"
+    client = PoliteClient(
+        user_agent="DL-RCIS/test",
+        rate_limit_rps=100.0,
+        respect_robots=True,
+        robots=_RobotsDenyAll(),
+        api_endpoints=[api],
+    )
+
+    response = client.get(api, params={"search_query": "all:test"})
+    assert response.status_code == 200
+    assert len(server.paths) == 1
+    client.close()
+
+
+def test_unregistered_path_still_respects_robots(counting_server):
+    """등록되지 않은 경로는 그대로 robots.txt 를 따릅니다."""
+    from src.http_client import RobotsDisallowedError
+
+    _, base = counting_server
+    client = PoliteClient(
+        user_agent="DL-RCIS/test",
+        rate_limit_rps=100.0,
+        respect_robots=True,
+        robots=_RobotsDenyAll(),
+        api_endpoints=[f"{base}/api/query"],
+    )
+
+    with pytest.raises(RobotsDisallowedError):
+        client.get(f"{base}/browse/cs")
+    client.close()
+
+
+def test_official_api_endpoints_are_collected_from_the_registry():
+    """등록된 OPEN_API / OAI_PMH 엔드포인트만 예외 목록에 들어갑니다."""
+    from src.config_loader import load_sources
+    from src.http_client import official_api_endpoints
+
+    from .conftest import CONFIG_DIR
+
+    registry = load_sources(CONFIG_DIR / "sources.yaml")
+
+    arxiv = official_api_endpoints(registry.get("arxiv"))
+    assert arxiv == ["https://export.arxiv.org/api/query"]
+
+    # RSS 만 있는 소스는 예외 대상이 아닙니다.
+    assert official_api_endpoints(registry.get("jpri")) == []
+
+    # 국가법령정보는 목록·본문 엔드포인트를 모두 씁니다.
+    law = official_api_endpoints(registry.get("law_go_kr"))
+    assert "https://www.law.go.kr/DRF/lawSearch.do" in law
+    assert "https://www.law.go.kr/DRF/lawService.do" in law
+
+
+# ---------------------------------------------------------------------------
+# User-Agent 연락처 치환 (PRD §18.2 Polite Harvesting)
+# ---------------------------------------------------------------------------
+
+def test_user_agent_placeholder_is_replaced_with_the_contact_email(monkeypatch):
+    """자리표시자가 그대로 나가면 연락처 역할을 못 합니다."""
+    from src.config_loader import load_settings
+    from src.http_client import USER_AGENT_EMAIL_PLACEHOLDER, resolve_user_agent
+
+    settings = load_settings()
+    monkeypatch.setenv("CONTACT_EMAIL", "ops@example.org")
+
+    agent = resolve_user_agent(settings.app)
+    assert USER_AGENT_EMAIL_PLACEHOLDER not in agent
+    assert "mailto:ops@example.org" in agent
+
+
+def test_user_agent_drops_the_contact_clause_when_no_email(monkeypatch):
+    """연락처가 없으면 가짜 주소를 보내지 말고 절을 통째로 뺍니다."""
+    from src.config_loader import load_settings
+    from src.http_client import USER_AGENT_EMAIL_PLACEHOLDER, resolve_user_agent
+
+    settings = load_settings()
+    monkeypatch.delenv("CONTACT_EMAIL", raising=False)
+
+    agent = resolve_user_agent(settings.app)
+    assert USER_AGENT_EMAIL_PLACEHOLDER not in agent
+    assert "mailto:" not in agent
+    assert agent.startswith("DL-RCIS/")
+
+
+def test_built_client_uses_the_resolved_user_agent(monkeypatch):
+    """실제 클라이언트에도 치환된 값이 들어가야 합니다."""
+    from src.config_loader import load_settings
+    from src.http_client import USER_AGENT_EMAIL_PLACEHOLDER, build_client
+
+    settings = load_settings()
+    monkeypatch.setenv("CONTACT_EMAIL", "ops@example.org")
+    source = settings.sources.get("crossref")
+
+    client = build_client(settings.app, source)
+    try:
+        assert USER_AGENT_EMAIL_PLACEHOLDER not in client.user_agent
+        assert "ops@example.org" in client.user_agent
+    finally:
+        client.close()
+
+
+def test_http_error_description_keeps_the_response_body():
+    """진단은 응답 본문에 있습니다. 상태코드만 남기면 원인을 못 찾습니다."""
+    import httpx
+
+    from src.http_client import describe_http_error
+
+    request = httpx.Request("GET", "https://api.crossref.org/works?rows=1")
+    response = httpx.Response(
+        400, request=request, text='{"message":"Invalid filter: from-index-date"}'
+    )
+    exc = httpx.HTTPStatusError("bad", request=request, response=response)
+
+    described = describe_http_error(exc)
+    assert "400" in described
+    assert "api.crossref.org" in described
+    assert "Invalid filter" in described

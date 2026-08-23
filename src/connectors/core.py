@@ -20,6 +20,7 @@ from ..normalizers.normalize import (
     normalize_doi,
     parse_date,
 )
+from ..http_client import describe_http_error
 from .base import SourceConnector
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,10 @@ class CoreConnector(SourceConnector):
                 response.raise_for_status()
                 data = response.json()
             except Exception as exc:
-                logger.warning("[core] 질의 실패 (%s): %s", query.query_string, exc)
+                logger.warning(
+                    "[core] 질의 실패: %s (질의: %.40s)",
+                    describe_http_error(exc), query.query_string,
+                )
                 continue
 
             for item in data.get("results") or []:

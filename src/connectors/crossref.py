@@ -23,6 +23,7 @@ from ..normalizers.normalize import (
     parse_date,
     year_of,
 )
+from ..http_client import describe_http_error
 from .base import SourceConnector
 
 logger = logging.getLogger(__name__)
@@ -60,7 +61,10 @@ class CrossrefConnector(SourceConnector):
             try:
                 data = self.ctx.client.get_json(method.endpoint, params=params)
             except Exception as exc:
-                logger.warning("[crossref] 질의 실패 (%s): %s", query.query_string, exc)
+                logger.warning(
+                    "[crossref] 질의 실패: %s (질의: %.40s)",
+                    describe_http_error(exc), query.query_string,
+                )
                 continue
 
             for item in (data.get("message") or {}).get("items", []):

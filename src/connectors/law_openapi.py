@@ -20,6 +20,7 @@ from ..normalizers.normalize import (
     clean_whitespace,
     parse_date,
 )
+from ..http_client import describe_http_error
 from .base import SourceConnector
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,8 @@ class LawOpenApiConnector(SourceConnector):
                     records = _parse_law_xml(response.content)
                 except Exception as exc:
                     logger.warning(
-                        "[law_go_kr] 질의 실패 (target=%s, %s): %s", target, query.query_string, exc
+                        "[%s] 질의 실패 (target=%s): %s (질의: %.40s)",
+                        self.config.source_id, target, describe_http_error(exc), query.query_string,
                     )
                     continue
 

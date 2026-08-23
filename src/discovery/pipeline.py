@@ -38,7 +38,7 @@ from ..database import Repository
 from ..dedup import DedupVerdict, Deduplicator
 from ..downloader import Downloader, OpenAccessResolver
 from ..extractors import ExtractedText, TextExtractor
-from ..http_client import SharedHostState, build_client
+from ..http_client import SharedHostState, build_client, resolve_user_agent
 from ..models import (
     AccessMode,
     CandidateKind,
@@ -120,7 +120,7 @@ class Pipeline:
         # 같은 호스트를 보는 소스들이 rate limit·robots 캐시·동일 요청 메모를
         # 공유합니다. 예: law.go.kr DRF 를 target 만 달리해 쓰는 law_go_kr / humanrights.
         self._shared_http = SharedHostState(
-            user_agent=str(self.app.get("http.user_agent", "DL-RCIS/2.1")),
+            user_agent=resolve_user_agent(self.app),
             memoize=bool(self.app.get("http.deduplicate_requests", True)),
         )
         self._clients: dict[str, object] = {}

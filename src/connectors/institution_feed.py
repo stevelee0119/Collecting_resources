@@ -20,6 +20,7 @@ from ..normalizers.normalize import (
     infer_document_type,
     parse_date,
 )
+from ..http_client import describe_http_error
 from .base import EndpointNotConfiguredError, SourceConnector
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,9 @@ class InstitutionFeedConnector(SourceConnector):
             response.raise_for_status()
             feed = feedparser.parse(response.content)
         except Exception as exc:
-            logger.warning("[%s] 피드 수집 실패: %s", self.config.source_id, exc)
+            logger.warning(
+                "[%s] 피드 수집 실패: %s", self.config.source_id, describe_http_error(exc)
+            )
             return
 
         needles = _needles(queries)

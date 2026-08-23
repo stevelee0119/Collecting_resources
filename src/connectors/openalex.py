@@ -20,6 +20,7 @@ from ..normalizers.normalize import (
     normalize_doi,
     parse_date,
 )
+from ..http_client import describe_http_error
 from .base import SourceConnector
 
 logger = logging.getLogger(__name__)
@@ -44,10 +45,17 @@ class OpenAlexConnector(SourceConnector):
                 return
             cursor = "*" if use_cursor else None
             for _ in range(self.MAX_PAGES):
+                # from_updated_date 는 Premium 구독에서만 쓸 수 있는 필터입니다.
+                # 무료 키로 호출하면 결과가 비거나 오류가 납니다. 기본값은
+                # 모든 키가 쓸 수 있는 from_created_date 이고, 구독 중이면
+                # sources.yaml 에서 openalex_date_filter 로 바꾸십시오.
+                date_filter = str(
+                    getattr(self.config, "openalex_date_filter", "") or "from_created_date"
+                )
                 params: dict[str, str | int] = {
                     "search": query.query_string,
                     "filter": (
-                        f"from_updated_date:{since.isoformat()},"
+                        f"{date_filter}:{since.isoformat()},"
                         f"to_publication_date:{until.isoformat()}"
                     ),
                     "per-page": self.PER_PAGE,
@@ -61,7 +69,10 @@ class OpenAlexConnector(SourceConnector):
                 try:
                     data = self.ctx.client.get_json(method.endpoint, params=params)
                 except Exception as exc:
-                    logger.warning("[openalex] 질의 실패 (%s): %s", query.query_string, exc)
+                    logger.warning(
+                        "[openalex] 질의 실패: %s (질의: %.40s)",
+                        describe_http_error(exc), query.query_string,
+                    )
                     break
 
                 results = data.get("results") or []

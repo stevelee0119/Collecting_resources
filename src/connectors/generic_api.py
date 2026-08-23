@@ -44,6 +44,7 @@ from ..normalizers.normalize import (
     normalize_doi,
     parse_date,
 )
+from ..http_client import describe_http_error
 from .base import EndpointNotConfiguredError, SourceConnector
 
 logger = logging.getLogger(__name__)
@@ -121,7 +122,8 @@ class GenericApiConnector(SourceConnector):
                 records = self._call(method.endpoint, req, params, headers)
             except Exception as exc:
                 logger.warning(
-                    "[%s] 질의 실패 (%s): %s", self.config.source_id, query.query_string, exc
+                    "[%s] 질의 실패: %s (질의: %.40s)",
+                    self.config.source_id, describe_http_error(exc), query.query_string,
                 )
                 continue
 
