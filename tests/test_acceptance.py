@@ -482,6 +482,22 @@ def test_humanrights_decisions_query_the_law_drf_with_nhrck(monkeypatch, credent
     assert any(q.get("OC") == "PROBE-OC" for q in queries), "OC 미전송"
 
 
+def test_zenodo_respects_the_anonymous_page_size_cap():
+    """비인증 요청은 페이지 크기 25 를 넘길 수 없습니다 (2026-08-23 400 확인)."""
+    from src.connectors.zenodo import ZenodoConnector
+
+    assert ZenodoConnector.ANONYMOUS_PAGE_SIZE <= 25
+
+
+def test_crossref_select_has_no_unsupported_field():
+    """select 에 지원되지 않는 필드가 하나라도 있으면 요청 전체가 400 입니다."""
+    source = (PROJECT_ROOT / "src" / "connectors" / "crossref.py").read_text(encoding="utf-8")
+    select_block = source[source.index('"select"'):source.index('"select"') + 400]
+    assert "language" not in select_block, (
+        "language 는 Crossref select 대상이 아닙니다 (select-not-available)."
+    )
+
+
 def test_shared_endpoint_sources_do_not_claim_the_same_target(registry):
     """같은 엔드포인트를 쓰는 소스끼리 target 이 겹치면 이중 검색이 됩니다.
 

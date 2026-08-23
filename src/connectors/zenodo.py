@@ -32,8 +32,14 @@ class ZenodoConnector(SourceConnector):
 
     PAGE_SIZE = 30
 
+    #: 비인증 요청의 페이지 크기 상한. 넘기면 400 입니다.
+    #: 2026-08-23 확인: "Page size cannot be greater than 25. Please use authenticate..."
+    ANONYMOUS_PAGE_SIZE = 25
+
     def discover(self, since: date, until: date, queries: Sequence[Query]) -> Iterator[RawItem]:
         method = self.require_method("OPEN_API")
+        token = self.secret_for(method)
+        page_size = self.PAGE_SIZE if token else min(self.PAGE_SIZE, self.ANONYMOUS_PAGE_SIZE)
         seen: set[str] = set()
         emitted = 0
 
@@ -42,12 +48,12 @@ class ZenodoConnector(SourceConnector):
                 return
             params: dict[str, str | int] = {
                 "q": f"({query.query_string}) AND updated:[{since.isoformat()} TO {until.isoformat()}]",
-                "size": self.PAGE_SIZE,
+                "size": page_size,
                 "sort": "mostrecent",
                 # 공개(open) 접근권한 자료만 조회합니다.
                 "access_right": "open",
             }
-            if token := self.secret_for(method):
+            if token:
                 params["access_token"] = token
 
             try:

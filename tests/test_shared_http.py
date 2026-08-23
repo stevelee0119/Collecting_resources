@@ -307,3 +307,28 @@ def test_http_error_description_keeps_the_response_body():
     assert "400" in described
     assert "api.crossref.org" in described
     assert "Invalid filter" in described
+
+
+def test_http_error_description_surfaces_rate_limit_headers():
+    """429 는 본문보다 헤더가 더 많은 것을 말해 줍니다.
+
+    키가 인식되면 남은 허용량이 헤더에 실리므로, 키 문제인지 한도 문제인지
+    구분할 수 있습니다.
+    """
+    import httpx
+
+    from src.http_client import describe_http_error
+
+    request = httpx.Request("GET", "https://api.openalex.org/works")
+    response = httpx.Response(
+        429,
+        request=request,
+        headers={"x-ratelimit-remaining": "0", "retry-after": "60"},
+        text="Too Many Requests",
+    )
+    exc = httpx.HTTPStatusError("rate", request=request, response=response)
+
+    described = describe_http_error(exc)
+    assert "429" in described
+    assert "x-ratelimit-remaining=0" in described
+    assert "retry-after=60" in described

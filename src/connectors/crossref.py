@@ -49,9 +49,12 @@ class CrossrefConnector(SourceConnector):
                 "rows": self.ROWS_PER_QUERY,
                 "sort": "indexed",
                 "order": "desc",
+                # select 에 지원되지 않는 필드가 하나라도 있으면 요청 전체가 400 입니다.
+                # 2026-08-23 확인: language 는 select 대상이 아닙니다
+                # ("select-not-available"). 언어는 응답 본문에서 추정합니다.
                 "select": (
                     "DOI,title,author,container-title,issued,created,indexed,URL,"
-                    "abstract,license,link,type,publisher,subject,language"
+                    "abstract,license,link,type,publisher,subject"
                 ),
             }
             # polite pool 사용을 위한 연락 이메일 (키가 아님)

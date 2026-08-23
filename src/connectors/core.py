@@ -45,20 +45,41 @@ class CoreConnector(SourceConnector):
         for query in queries:
             if emitted >= self._limit():
                 return
-            body = {
-                "q": f"({query.query_string}) AND createdDate>={since.isoformat()}",
-                "limit": self.PAGE_SIZE,
-                "sort": "createdDate:desc",
-            }
-            try:
-                response = self.ctx.client.post(method.endpoint, json=body, headers=headers)
-                response.raise_for_status()
-                data = response.json()
-            except Exception as exc:
-                logger.warning(
-                    "[core] 질의 실패: %s (질의: %.40s)",
-                    describe_http_error(exc), query.query_string,
-                )
+            # CORE 는 검색 색인에 없는 속성을 쓰면 500 을 돌려줍니다.
+            # 2026-08-23 확인: createdDate 로 질의하면
+            # "Could not find a property named 'createdDate'" 가 납니다.
+            # 응답 본문에는 있지만 **검색 가능한 속성은 아닙니다.**
+            date_field = str(getattr(self.config, "core_date_field", "") or "publishedDate")
+            data = None
+            for attempt_field in (date_field, ""):
+                body: dict[str, object] = {
+                    "q": query.query_string,
+                    "limit": self.PAGE_SIZE,
+                }
+                if attempt_field:
+                    body["q"] = f"({query.query_string}) AND {attempt_field}>={since.isoformat()}"
+                    body["sort"] = f"{attempt_field}:desc"
+                try:
+                    response = self.ctx.client.post(method.endpoint, json=body, headers=headers)
+                    response.raise_for_status()
+                    data = response.json()
+                    break
+                except Exception as exc:
+                    described = describe_http_error(exc)
+                    # 날짜 속성이 색인에 없으면 날짜 조건 없이 한 번만 더 시도합니다.
+                    if attempt_field and "Could not find a property" in described:
+                        logger.warning(
+                            "[core] '%s' 는 검색 가능한 속성이 아닙니다. 날짜 조건 없이 "
+                            "재시도합니다. sources.yaml 의 core_date_field 를 "
+                            "공식 문서 기준으로 고치십시오.",
+                            attempt_field,
+                        )
+                        continue
+                    logger.warning(
+                        "[core] 질의 실패: %s (질의: %.40s)", described, query.query_string
+                    )
+                    break
+            if data is None:
                 continue
 
             for item in data.get("results") or []:
@@ -66,7 +87,8 @@ class CoreConnector(SourceConnector):
                 if not item_id or item_id in seen:
                     continue
                 published = parse_date(item.get("publishedDate") or item.get("createdDate"))
-                if published and published > until:
+                # 서버에서 날짜를 못 거른 경우를 대비해 양쪽 경계를 모두 봅니다.
+                if published and not (since <= published <= until):
                     continue
                 seen.add(item_id)
                 yield RawItem(

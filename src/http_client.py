@@ -391,7 +391,14 @@ class PoliteClient:
                 if attempt >= self.max_retries:
                     self.breaker.record_failure()
                     if response.status_code == 429:
-                        raise RateLimitedError(f"호출량 초과(429): {url}")
+                        quota = " ".join(
+                            f"{name}={value}"
+                            for name, value in response.headers.items()
+                            if name.lower().startswith("x-ratelimit")
+                            or name.lower() == "retry-after"
+                        )
+                        detail = f" [{quota}]" if quota else ""
+                        raise RateLimitedError(f"호출량 초과(429): {url}{detail}")
                     response.raise_for_status()
                 self._sleep_backoff(attempt, retry_after)
                 continue
@@ -490,13 +497,22 @@ def describe_http_error(exc: BaseException, *, body_chars: int = 240) -> str:
         return f"{type(exc).__name__}: {exc}"
 
     host = urlparse(str(response.url)).netloc
+
+    # 429 는 본문보다 헤더가 더 많은 것을 말해 줍니다.
+    # 키가 인식되면 남은 허용량이 헤더에 실리므로, 키 문제인지 한도 문제인지 갈립니다.
+    quota = " ".join(
+        f"{name}={value}"
+        for name, value in response.headers.items()
+        if name.lower().startswith("x-ratelimit") or name.lower() == "retry-after"
+    )
     body = ""
     try:
         body = " ".join(response.text.split())[:body_chars]
     except Exception:  # noqa: BLE001 - 본문을 읽을 수 없으면 상태코드만 씁니다.
         body = ""
     detail = f" — {body}" if body else ""
-    return f"HTTP {response.status_code} {host}{detail}"
+    limits = f" [{quota}]" if quota else ""
+    return f"HTTP {response.status_code} {host}{limits}{detail}"
 
 
 #: config.yaml 의 user_agent 에 들어 있는 연락처 자리표시자.
