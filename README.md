@@ -87,7 +87,8 @@ Collecting_resources/
 │  └─ check_search_terms.py  # 검색어 사전 품질 점검
 ├─ tests/
 ├─ main.py                   # CLI 진입점
-├─ requirements.txt
+├─ requirements.txt          # 실행 의존성
+├─ requirements-dev.txt      # 테스트·린트 의존성 (pytest, ruff)
 └─ .env.example              # 환경변수 템플릿 (실제 값 없음)
 ```
 
@@ -98,6 +99,9 @@ Collecting_resources/
 ```bash
 # 1) 의존성 설치
 pip install -r requirements.txt
+
+#    테스트까지 돌리려면 (pytest·ruff 포함, requirements.txt 도 함께 설치됩니다)
+#    pip install -r requirements-dev.txt
 
 # 2) 환경변수 템플릿 복사
 cp .env.example .env        # Windows: copy .env.example .env

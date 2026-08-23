@@ -548,6 +548,52 @@ def test_workflow_maps_names_to_matching_secrets():
         )
 
 
+def test_workflow_installs_what_its_steps_need():
+    """워크플로가 실행하는 명령의 의존성이 설치 단계에 포함되어야 합니다.
+
+    pytest 는 런타임 의존성이 아니라 requirements.txt 에 없습니다.
+    설치 단계가 requirements.txt 만 설치하면 테스트 단계가
+    `No module named pytest` 로 실패합니다.
+    """
+    import yaml
+
+    root = PROJECT_ROOT
+    data = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    steps = data["jobs"]["check"]["steps"]
+    commands = " ".join(str(step.get("run", "")) for step in steps)
+
+    installed = " ".join(
+        str(step.get("run", "")) for step in steps if "pip install" in str(step.get("run", ""))
+    )
+    assert installed, "의존성 설치 단계가 없습니다."
+
+    # 설치 단계가 가리키는 requirements 파일들을 -r 포함관계까지 따라갑니다.
+    def declared_packages(name: str, seen: set[str] | None = None) -> str:
+        seen = seen if seen is not None else set()
+        if name in seen:
+            return ""
+        seen.add(name)
+        path = root / name
+        if not path.exists():
+            return ""
+        text = path.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            line = line.strip()
+            if line.startswith("-r "):
+                text += declared_packages(line[3:].strip(), seen)
+        return text
+
+    available = ""
+    for req in re.findall(r"pip install -r ([\w.-]+)", installed):
+        available += declared_packages(req)
+
+    if "pytest" in commands:
+        assert "pytest" in available, (
+            "워크플로가 pytest 를 실행하지만 설치 단계가 pytest 를 설치하지 않습니다. "
+            "requirements-dev.txt 를 설치하도록 고치십시오."
+        )
+
+
 def test_workflow_is_manual_only():
     """점검 워크플로가 예고 없이 자동 실행되지 않아야 합니다."""
     import yaml
