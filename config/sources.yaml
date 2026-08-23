@@ -215,17 +215,18 @@ sources:
       # 디지털집현전은 두 종류의 Open API 를 제공합니다.
       #   1) 국가지식정보를 메타데이터로 제공하는 API
       #   2) 디지털집현전이 보유한 국가지식정보 검색용 API  <- 이 Connector 가 사용
-      # 상세주소·요청인자·응답 필드는 서비스 신청 승인 후 발급되는 명세에만
-      # 공개되므로, 확인 전까지 endpoint 를 비워 둡니다(추측 금지, §5.1).
+      # 아래 엔드포인트는 운영자가 직접 입력한 검색 API 주소입니다.
+      # 요청인자·응답 필드는 서비스 신청 승인 후 발급되는 명세로만 확인되므로
+      # 공식 문서 대조 전까지 PENDING_VERIFICATION 을 유지합니다.
       - type: OPEN_API
         auth_type: API_KEY
         credential_required: true
         credential_env_var: KKNOWLEDGE_API_KEY
-        endpoint: ""
+        endpoint: "https://metalink.k-knowledge.kr/search/openapi/search"
         verification_status: PENDING_VERIFICATION
         verified_source: "https://metadash.k-knowledge.kr/openApiService/apisso/business"
         verified_at: "2026-08-23"
-        verified_method: web_search
+        verified_method: operator_input
     credential_guide_required: true
     auth_docs_url: "https://metadash.k-knowledge.kr/openApiService/apisso/business"
     contact_or_policy_url: "https://k-knowledge.kr/m/guide/nkiLink.jsp"
@@ -239,8 +240,10 @@ sources:
       국가기관·지자체·공공기관이 생산한 지식정보를 표준 메타데이터(제목·날짜·저자·요약·주제어)로
       모아 제공하는 통합 플랫폼입니다. 회원가입 후 metadash 에서 서비스를 신청하면
       인증키와 함께 상세 명세(엔드포인트·요청인자·응답 필드)가 발급됩니다.
-      명세를 받으면 위 endpoint 와 아래 request/field_map 을 채우고
-      `python main.py doctor --probe` 로 확인하십시오.
+      검색 API 주소(metalink.k-knowledge.kr/search/openapi/search)는 운영자가 입력했으나
+      요청인자·응답 필드명은 아직 공식 명세와 대조하지 못했습니다. 기본값(공공데이터포털
+      표준 형식)과 다르면 호출은 되어도 0건이 나오므로, 명세를 받으면 아래
+      request/field_map 을 맞추고 `python main.py doctor --probe` 로 확인하십시오.
       집계 플랫폼이므로 KCI·NKIS·법령정보 등 개별 소스와 동일 자료가 중복될 수 있으나,
       DOI·공식 ID·파일 해시 기준 다단계 중복제거(§11)가 걸러냅니다.
       원문은 원 기관 사이트에 있으므로 기본 정책은 link_only 로 두고,
@@ -339,7 +342,8 @@ sources:
     enabled: true
     access_methods:
       # 공공데이터포털 '국회사무처_국회입법조사처 연구보고서(NARS 현안분석)'(15125970).
-      # 상세 오퍼레이션 경로는 데이터셋 상세페이지에서 확인해 채워야 합니다.
+      # 엔드포인트는 운영자가 데이터셋 상세페이지에서 확인해 입력했습니다.
+      # 공식 명세를 직접 대조하지는 못했으므로 PENDING_VERIFICATION 을 유지합니다.
       - type: OPEN_API
         auth_type: API_KEY
         credential_required: true
@@ -347,8 +351,8 @@ sources:
         endpoint: "https://apis.data.go.kr/9735000/PublicationService/getResearchReportList"
         verification_status: PENDING_VERIFICATION
         verified_source: "https://www.data.go.kr/data/15125970/openapi.do"
-        verified_at: "2026-08-22"
-        verified_method: web_search
+        verified_at: "2026-08-23"
+        verified_method: operator_input
     credential_guide_required: true
     auth_docs_url: "https://www.data.go.kr/data/15125970/openapi.do"
     contact_or_policy_url: "https://www.nars.go.kr/report/list.do?cmsCode=CM0043"
@@ -373,11 +377,14 @@ sources:
     priority: 2
     enabled: true
     access_methods:
+      # 주의: 디지털집현전 검색 API(metalink.k-knowledge.kr) 주소가 한때 이 항목에
+      # 들어가 있었으나, 사법정책연구원 피드가 아니라 별도 소스(kknowledge)의
+      # 엔드포인트이므로 그쪽으로 옮겼습니다. 이 항목은 다시 미설정입니다.
       - type: RSS
         auth_type: NONE
         credential_required: false
         credential_env_var: null
-        endpoint: "https://metalink.k-knowledge.kr/search/openapi/search"
+        endpoint: ""
         verification_status: PENDING_VERIFICATION
         verified_source: "https://jpri.scourt.go.kr/post/postList.do?boardSeq=7&menuSeq=11&lang=ko"
         verified_at: "2026-08-22"

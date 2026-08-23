@@ -127,10 +127,11 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "test": "python main.py run --daily --source kknowledge --dry-run",
         "renewal": UNKNOWN,
         "cautions": (
-            "상세주소(엔드포인트)·요청인자·응답 필드명이 공개 문서에 노출되지 않고 "
-            "서비스 신청 승인 후 발급되는 명세에만 담기므로, config/sources.yaml 의 "
-            "endpoint 는 비워 두었습니다. 승인 후 endpoint 와 request/field_map 을 채우고 "
-            "`python main.py doctor --probe` 로 확인하십시오. "
+            "검색 API 주소(https://metalink.k-knowledge.kr/search/openapi/search)는 "
+            "운영자가 직접 입력했습니다. 요청인자·응답 필드명은 승인 후 발급되는 "
+            "명세에만 담기므로 아직 기본값(공공데이터포털 표준 형식)이며, 실제 명세와 "
+            "다르면 호출은 되어도 0건이 나옵니다. 명세를 받으면 config/sources.yaml 의 "
+            "request/field_map 을 맞추고 `python main.py doctor --probe` 로 확인하십시오. "
             "여러 기관 자료를 모으는 집계 플랫폼이라 KCI·NKIS·법령정보와 자료가 겹칠 수 "
             "있으나 다단계 중복제거가 처리합니다. 원문은 원 기관 사이트에 있으므로 "
             "기본 정책은 link_only 이며, 기관별 이용조건 확인 후에만 다운로드로 전환하십시오."
