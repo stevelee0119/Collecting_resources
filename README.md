@@ -79,6 +79,7 @@ Collecting_resources/
 │  └─ quarantine/            # 비문서·실행파일 격리
 ├─ docs/
 │  ├─ API_발급_연동_가이드.md  # 자동 생성 — 인증정보 발급 절차
+│  ├─ 조치_체크리스트.md       # 사용자가 직접 해야 할 일 목록
 │  └─ 운영자_매뉴얼.md
 ├─ scripts/
 │  ├─ setup_scheduler.bat    # Windows 작업 스케줄러 등록
@@ -127,7 +128,8 @@ KKNOWLEDGE_API_KEY=                    # 디지털집현전
 LAW_GO_KR_OC=
 ```
 
-각 값의 **발급 절차는 [docs/API_발급_연동_가이드.md](docs/API_발급_연동_가이드.md)** 에 소스별로 정리되어 있습니다.
+각 값의 **발급 절차는 [docs/API_발급_연동_가이드.md](docs/API_발급_연동_가이드.md)** 에 소스별로 정리되어 있고,
+지금 실제로 해야 할 일만 추린 목록은 **[docs/조치_체크리스트.md](docs/조치_체크리스트.md)** 에 있습니다.
 이 문서는 `config/sources.yaml` 에서 자동 생성됩니다:
 
 ```bash
@@ -318,4 +320,5 @@ python -m pytest tests/ -q
 
 - [PRD.md](PRD.md) — 제품 요구사항 정의서 v2.1
 - [docs/API_발급_연동_가이드.md](docs/API_발급_연동_가이드.md) — 소스별 인증정보 발급 절차
+- [docs/조치_체크리스트.md](docs/조치_체크리스트.md) — 사용자가 직접 확인·발급해야 할 항목 체크리스트
 - [docs/운영자_매뉴얼.md](docs/운영자_매뉴얼.md) — 일상 운영·장애 대응
