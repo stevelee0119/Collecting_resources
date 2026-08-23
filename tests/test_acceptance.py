@@ -456,3 +456,67 @@ def test_missing_credential_is_not_sent_as_empty_string(monkeypatch, credential_
     monkeypatch.delenv("CORE_API_KEY", raising=False)
     with pytest.raises(CredentialMissingError):
         credential_probe("core", "OPEN_API", date(2026, 8, 1), date(2026, 8, 22))
+
+
+# ---------------------------------------------------------------------------
+# GitHub Actions 워크플로 ↔ 프로그램 환경변수 정합성
+# ---------------------------------------------------------------------------
+
+WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "credential-check.yml"
+
+#: sources.yaml 에 없지만 프로그램이 읽는 환경변수
+EXTRA_ENV_VARS = {
+    "SCIENCEON_CLIENT_ID",
+    "DLRCIS_SENDER_EMAIL",
+    "DLRCIS_RECEIVER_EMAIL",
+    "DLRCIS_SMTP_PASSWORD",
+    "ANTHROPIC_API_KEY",
+}
+
+
+def _workflow_env() -> dict:
+    import yaml
+
+    data = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    return data["jobs"]["check"]["env"]
+
+
+def test_credential_check_workflow_exists():
+    """Secrets 는 워크플로가 있어야 프로그램에 전달됩니다."""
+    assert WORKFLOW.exists(), "credential-check.yml 이 없으면 Secrets 가 사용되지 않습니다."
+
+
+def test_workflow_injects_every_env_var_the_program_reads(registry):
+    """프로그램이 읽는 모든 환경변수를 워크플로가 주입해야 합니다."""
+    needed = {
+        m.credential_env_var
+        for s in registry.sources
+        for m in s.access_methods
+        if m.credential_env_var
+    } | EXTRA_ENV_VARS
+
+    injected = set(_workflow_env())
+    missing = sorted(needed - injected)
+    assert not missing, f"워크플로에 빠진 환경변수: {missing}"
+
+
+def test_workflow_maps_names_to_matching_secrets():
+    """환경변수 이름과 Secret 이름이 1:1 로 대응해야 혼동이 없습니다."""
+    import re
+
+    for env_name, expression in _workflow_env().items():
+        match = re.fullmatch(r"\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}", str(expression))
+        assert match, f"{env_name}: secrets 참조 형식이 아닙니다 ({expression})"
+        assert match.group(1) == env_name, (
+            f"{env_name}: Secret 이름({match.group(1)})이 환경변수 이름과 다릅니다."
+        )
+
+
+def test_workflow_is_manual_only():
+    """점검 워크플로가 예고 없이 자동 실행되지 않아야 합니다."""
+    import yaml
+
+    data = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    # PyYAML 은 YAML 1.1 규칙으로 `on:` 을 True 로 파싱합니다.
+    triggers = data.get("on", data.get(True))
+    assert set(triggers) == {"workflow_dispatch"}, f"예상치 못한 트리거: {triggers}"

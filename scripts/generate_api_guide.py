@@ -361,6 +361,71 @@ def _action_status(source: Any, method: Any) -> tuple[str, str]:
     return "⬜ 조치 필요", f"발급 후 `.env` 에 `{method.credential_env_var}` 설정"
 
 
+
+APPENDIX_D = """
+## 부록 D. 정기 수집을 GitHub Actions 로 돌리는 경우
+
+`credential-check.yml` 은 **점검 전용**이며 자료를 수집하지 않습니다.
+GitHub Actions 에서 정기 수집까지 돌리려면 아래를 고려하십시오.
+
+### D-1. 먼저 판단해야 할 것
+
+| 항목 | 확인 사항 |
+| --- | --- |
+| 수집 파일 보관 | Actions 러너는 **실행이 끝나면 사라집니다.** `data/library/` 를 artifact 로 올리거나 외부 저장소에 커밋·업로드해야 유지됩니다. |
+| SQLite 상태 | 중복 판별·증분 수집은 `data/metadata/dlrcis.db` 의 이력에 의존합니다. DB 를 매 실행마다 복원·저장하지 않으면 **매번 최초 실행처럼 동작**합니다. |
+| 저작권 | 수집한 원문을 공개 저장소에 커밋하면 재배포가 됩니다. 라이선스가 불명확한 자료는 커밋하지 마십시오 (PRD §18.5). |
+| 실행 시간 | Actions 작업에는 시간 제한이 있습니다. 백필처럼 오래 걸리는 작업은 로컬·서버 실행이 적합합니다. |
+
+> 위 제약 때문에 **정기 수집은 사내 서버나 개인 PC 에서 `.env` + OS 스케줄러로 운영**하고,
+> GitHub Actions 는 점검·테스트 용도로만 쓰는 구성을 권장합니다.
+> Windows 는 `scripts/setup_scheduler.bat` 로 등록할 수 있습니다.
+
+### D-2. 그래도 Actions 로 돌린다면
+
+`.github/workflows/daily-collection.yml` 을 만들고
+`credential-check.yml` 의 `env:` 블록을 그대로 복사한 뒤 아래를 참고하십시오.
+
+```yaml
+on:
+  schedule:
+    # UTC 기준입니다. KST 07:30 = UTC 22:30 (전날)
+    - cron: "30 22 * * *"
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    env:
+      # credential-check.yml 의 env 블록을 그대로 복사
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+
+      # 이전 실행의 DB 를 복원해야 증분 수집·중복 판별이 동작합니다.
+      - uses: actions/cache@v4
+        with:
+          path: data/metadata
+          key: dlrcis-db-${{ github.run_id }}
+          restore-keys: dlrcis-db-
+
+      - run: python main.py run --daily
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 수집결과
+          path: |
+            data/manifests/
+            data/metadata/list_download_resources.xlsx
+```
+
+> `data/library/` (원문 파일)는 위 예시에서 **업로드하지 않습니다.**
+> 저작권·라이선스를 검토한 뒤 보관 위치를 직접 정하십시오.
+"""
+
 def _method_label(verified_method: str) -> str:
     """무엇을 근거로 확정했는지 (§18.4 감사가능성)."""
     return {
@@ -482,8 +547,12 @@ def build_markdown(settings: Settings) -> str:
 
 ## 0. 조치 현황 한눈에 보기
 
-> 이 표는 문서를 생성한 시점(`python main.py api-guide` 실행 환경)에서
-> 환경변수가 실제로 읽히는지 확인한 결과입니다.
+> **평가 환경: `GENERATED_CONTEXT`**
+>
+> 아래 상태는 이 문서를 생성한 환경에서 환경변수가 **실제로 읽히는지** 확인한 결과입니다.
+> GitHub Secrets 에 값을 넣으셨다면 그 값은 **Actions 워크플로 실행 중에만** 존재하므로,
+> 로컬에서 생성한 문서에는 "조치 필요"로 표시됩니다. 실제 상태를 보려면
+> `.github/workflows/credential-check.yml` 을 수동 실행하십시오 (§0-3).
 
 STATUS_SUMMARY_PLACEHOLDER
 
@@ -491,30 +560,75 @@ STATUS_SUMMARY_PLACEHOLDER
 
 | 표시 | 의미 |
 | --- | --- |
-| ✅ 완료 | 바로 사용 가능 (인증 불필요이거나 인증정보가 설정되어 있음) |
+| ✅ 완료 | 이 환경에서 바로 사용 가능 (인증 불필요이거나 인증정보가 읽힘) |
 | 🟡 일부 완료 | 인증정보 일부만 설정됨 — 남은 값을 추가해야 동작 |
-| ⬜ 조치 필요 | 발급 또는 엔드포인트 입력이 필요 |
+| ⬜ 조치 필요 | 발급·엔드포인트 입력이 필요하거나, 값이 이 환경에 전달되지 않음 |
 | ➖ 대상 아님 | 공식적으로 자동수집 대상이 아님 (추가 조치 불필요) |
 
 ---
 
-## 0-1. 인증정보를 프로그램에 전달하는 방법
+## 0-1. 인증정보는 3단계를 모두 통과해야 동작합니다
 
-발급받은 값은 **프로그램이 읽을 수 있는 위치**에 있어야 합니다.
-값을 어디에 보관했는지에 따라 동작 여부가 달라집니다.
+키를 발급받았다고 해서 프로그램이 쓸 수 있는 것은 아닙니다.
+아래 3단계가 **모두** 충족되어야 해당 소스가 실제로 수집됩니다.
 
-| 보관 위치 | 프로그램이 읽는가 | 비고 |
-| --- | --- | --- |
-| 프로젝트 루트의 `.env` | **읽음** | 로컬 실행 시 표준 방법 (`.gitignore` 로 제외됨) |
-| OS 환경변수 (`export` / `setx`) | **읽음** | 서버·스케줄러 운영 시 |
-| GitHub **Secrets** + Actions 워크플로 | 워크플로가 `env:` 로 주입하면 읽음 | 워크플로 파일이 있어야 함 |
-| GitHub **Variables** | **읽지 않음** | 아래 경고 참조 |
+```
+1단계 발급     기관에서 API Key / 승인 / 식별자를 받았는가
+   ↓
+2단계 저장     안전한 곳에 보관했는가 (.env / OS 환경변수 / GitHub Secrets)
+   ↓
+3단계 전달     실행 시점에 프로그램의 환경변수로 주입되는가   ← 여기서 자주 막힙니다
+   ↓
+4단계 엔드포인트  config/sources.yaml 의 endpoint 가 채워져 있는가
+```
+
+### 보관 위치별 전달 여부
+
+| 보관 위치 | 실행 환경 | 전달되는가 | 필요한 것 |
+| --- | --- | --- | --- |
+| `.env` (프로젝트 루트) | 로컬 / 서버 | **전달됨** | 없음 (`python-dotenv` 가 자동 로드) |
+| OS 환경변수 | 로컬 / 서버 | **전달됨** | `export` (Linux/macOS) 또는 `setx` (Windows) |
+| GitHub **Secrets** | GitHub Actions | 워크플로가 `env:` 로 매핑해야 전달됨 | **워크플로 파일** |
+| GitHub **Secrets** | 로컬 / 서버 | **전달 안 됨** | 별도로 `.env` 필요 |
+| GitHub **Variables** | 모든 환경 | 권장하지 않음 | — (아래 경고) |
 
 > ⚠ **GitHub Actions Variables 에 API Key 를 넣지 마십시오.**
-> Variables 는 **평문으로 저장**되며 저장소 읽기 권한이 있는 사람이 볼 수 있고
-> 워크플로 로그에도 그대로 남습니다. API Key·토큰·비밀번호는 반드시
-> **Secrets** 에 저장하십시오. 또한 Variables/Secrets 는 GitHub Actions 실행 중에만
-> 존재하므로, 로컬이나 별도 서버에서 실행할 때는 `.env` 또는 OS 환경변수가 필요합니다.
+> Variables 는 **평문으로 저장**되어 저장소 읽기 권한자가 볼 수 있고 워크플로 로그에도 남습니다.
+> API Key·토큰·비밀번호는 **Secrets** 에 저장하는 것이 맞습니다.
+> (이미 Variables 에 넣었던 값이 있다면 Secrets 로 옮긴 뒤 Variables 에서 삭제하고,
+> 노출 가능성이 있으므로 **키를 재발급**하는 것이 안전합니다.)
+
+---
+
+## 0-2. GitHub Secrets 에 등록할 이름
+
+프로그램은 아래 **정확한 이름**의 환경변수를 읽습니다.
+Secrets 이름을 이와 동일하게 맞추면 워크플로에서 그대로 매핑할 수 있습니다.
+
+SECRET_NAMES_PLACEHOLDER
+
+> Secrets 는 설계상 **값을 다시 읽을 수 없습니다**(write-only). 등록 여부는
+> 이름 목록으로만 확인되며, 실제 동작 여부는 워크플로를 실행해 확인해야 합니다.
+
+---
+
+## 0-3. Secrets 가 실제로 동작하는지 확인하는 방법
+
+`.github/workflows/credential-check.yml` 워크플로를 **수동 실행**하면
+Secrets 가 주입된 상태에서 점검이 수행됩니다.
+
+```
+GitHub 저장소 → Actions 탭 → "인증정보 점검" → Run workflow
+```
+
+실행 결과에서 확인할 수 있는 것:
+
+- 각 소스가 `[OK]` 인지 `[SKIP]` 인지 (=인증정보가 실제로 읽혔는지)
+- 이 문서가 Secrets 기준으로 재생성되어 **artifact 로 첨부**됨
+- 키 값 자체는 출력되지 않습니다 (GitHub 이 자동 마스킹하며, 코드도 마스킹 처리)
+
+> 워크플로는 `workflow_dispatch` 전용이라 **직접 실행할 때만** 동작합니다.
+> 자동 수집 스케줄을 원하시면 §부록 D 를 참고하십시오.
 
 ---
 
@@ -615,8 +729,54 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
         bullets(na),
     ])
 
+    # 이 문서를 어떤 환경에서 생성했는지 명시합니다.
+    import os  # noqa: PLC0415
+
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        context = (
+            f"GitHub Actions (workflow: {os.environ.get('GITHUB_WORKFLOW', '?')}) "
+            "— Secrets 가 주입된 상태의 실제 결과입니다."
+        )
+    else:
+        context = (
+            "로컬/서버 실행 — GitHub Secrets 는 이 환경에 전달되지 않으므로, "
+            "Secrets 에만 값을 넣으셨다면 '조치 필요'로 표시됩니다."
+        )
+
+    # 등록해야 할 Secret/환경변수 이름표
+    secret_rows = ["| 환경변수 이름 | 용도 | 지금 등록이 필요한가 |", "| --- | --- | --- |"]
+    seen_names: set[str] = set()
+    for source in registry.sources:
+        for method in source.access_methods:
+            var = method.credential_env_var
+            if not var or var in seen_names:
+                continue
+            seen_names.add(var)
+            if not method.endpoint:
+                # 엔드포인트가 없으면 키가 있어도 호출하지 않습니다.
+                required = "➖ 불필요 (엔드포인트 미확정)"
+            elif method.credential_required:
+                required = "✅ 필수"
+            else:
+                required = "선택 (있으면 쿼터·속도 유리)"
+            secret_rows.append(f"| `{var}` | {source.name} {method.type} | {required} |")
+    for var, purpose, required in (
+        ("SCIENCEON_CLIENT_ID", "ScienceON client_id (token 과 함께 필요)", "✅ ScienceON 사용 시 필수"),
+        ("DLRCIS_SENDER_EMAIL", "브리핑 발신 주소", "✅ 알림 사용 시 필수"),
+        ("DLRCIS_RECEIVER_EMAIL", "브리핑 수신 주소", "✅ 알림 사용 시 필수"),
+        ("DLRCIS_SMTP_PASSWORD", "Gmail 앱 비밀번호", "✅ SMTP 사용 시 필수"),
+        ("ANTHROPIC_API_KEY", "LLM 요약 (선택)", "선택"),
+    ):
+        if var not in seen_names:
+            seen_names.add(var)
+            secret_rows.append(f"| `{var}` | {purpose} | {required} |")
+    secret_names_table = "\n".join(secret_rows)
+
     body = [
-        header.rstrip("\n").replace("STATUS_SUMMARY_PLACEHOLDER", status_summary),
+        header.rstrip("\n")
+        .replace("STATUS_SUMMARY_PLACEHOLDER", status_summary)
+        .replace("GENERATED_CONTEXT", context)
+        .replace("SECRET_NAMES_PLACEHOLDER", secret_names_table),
         "\n".join(summary_rows),
         "",
         "## 2. 별도 발급 없이 사용 가능한 소스",
@@ -665,6 +825,8 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
         seen.add(var)
         body.append(f"| `{var}` | {purpose} | {required} |")
 
+    body.append("")
+    body.append(APPENDIX_D)
     body.append("")
     body.append(f"> 마지막 생성: {today} · `python main.py api-guide` 로 재생성할 수 있습니다.")
     body.append("")
