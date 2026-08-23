@@ -181,7 +181,7 @@ sources:
         auth_type: API_KEY
         credential_required: true
         credential_env_var: NKIS_API_KEY
-        endpoint: ""
+        endpoint: "https://nkis.re.kr/nkisApi/search/TongList.do"
         verification_status: PENDING_VERIFICATION
         verified_source: "https://www.nkis.re.kr/openSvcList.do"
         verified_at: "2026-08-22"
