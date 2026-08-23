@@ -35,6 +35,7 @@ import logging
 from collections.abc import Iterator, Sequence
 from datetime import date
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 from ..models import Query, RawItem, Resource
 from ..normalizers.normalize import (
@@ -65,6 +66,9 @@ class AssemblyOpenConnector(SourceConnector):
 
     PAGE_SIZE = 100
 
+    #: 한 질의당 최대 페이지 수. 목록이 최신순이므로 보통 1페이지로 충분합니다.
+    MAX_PAGES = 5
+
     #: 응답 필드명이 확인되지 않아 기본 매핑을 두지 않습니다.
     #: sources.yaml 의 field_map 이 비어 있으면 이름 규칙으로 추정합니다.
     default_field_map: dict[str, str] = {}
@@ -92,60 +96,100 @@ class AssemblyOpenConnector(SourceConnector):
             if emitted >= self._limit():
                 return
 
-            params: dict[str, Any] = {
-                "KEY": key or "",
-                "Type": "json",
-                "pIndex": 1,
-                "pSize": page_size,
-                **static,
-            }
-            # 검색어 파라미터명은 API 마다 다릅니다. 확인되면 sources.yaml 에 넣고,
-            # 그 전까지는 전체 목록을 받아 파이프라인이 주제·기간으로 거릅니다.
-            if query_param:
-                params[query_param] = query.query_string
+            # 목록은 최신순이므로, since 보다 오래된 레코드가 나오면 멈춥니다.
+            for page in range(1, self.MAX_PAGES + 1):
+                params: dict[str, Any] = {
+                    "KEY": key or "",
+                    "Type": "json",
+                    "pIndex": page,
+                    "pSize": page_size,
+                    **static,
+                }
+                # 검색어 파라미터명은 API 마다 다릅니다. 확인되면 sources.yaml 에 넣고,
+                # 그 전까지는 전체 목록을 받아 파이프라인이 주제·기간으로 거릅니다.
+                if query_param:
+                    params[query_param] = query.query_string
 
-            try:
-                data = self.ctx.client.get_json(method.endpoint, params=params)
-            except Exception as exc:
-                logger.warning(
-                    "[%s] 질의 실패: %s (질의: %.40s)",
-                    self.config.source_id, describe_http_error(exc), query.query_string,
-                )
+                try:
+                    data = self.ctx.client.get_json(method.endpoint, params=params)
+                except Exception as exc:
+                    logger.warning(
+                        "[%s] 질의 실패: %s (질의: %.40s)",
+                        self.config.source_id, describe_http_error(exc), query.query_string,
+                    )
+                    break
+
+                code, message = _result_status(data)
+                if code and not code.startswith(RESULT_OK):
+                    level = logger.info if code.startswith(RESULT_NO_DATA) else logger.warning
+                    level("[%s] 응답 코드 %s: %s", self.config.source_id, code, message)
+                    break
+
+                rows = _extract_rows(data)
+                if not rows:
+                    if page == 1:
+                        logger.warning(
+                            "[%s] 레코드를 찾지 못했습니다. 응답 최상위 키: %s",
+                            self.config.source_id,
+                            sorted(data)[:20] if isinstance(data, dict) else type(data),
+                        )
+                    break
+
+                # 목록은 최신순이 관례지만 그것에 기대어 페이지 중간에서 끊지는
+                # 않습니다. 순서가 어긋나면 유효한 레코드를 조용히 잃기 때문입니다.
+                # 페이지를 끝까지 본 뒤, 그 페이지 전체가 기간 이전이면 멈춥니다.
+                older_than_window = 0
+                dated_rows = 0
+                for row in rows:
+                    identifier = self._identifier_of(row)
+                    key_value = identifier or _title_of(row, self.field_map)
+                    if not key_value or key_value in seen:
+                        continue
+
+                    published = parse_date(
+                        _first(row, self.field_map.get("publication_date", ""), "")
+                    )
+                    if published:
+                        dated_rows += 1
+                        if published < since:
+                            older_than_window += 1
+                        if not (since <= published <= until):
+                            continue
+
+                    seen.add(key_value)
+                    yield RawItem(
+                        source_id=self.config.source_id, payload=row, discovered_by_query=query
+                    )
+                    emitted += 1
+                    if emitted >= self._limit():
+                        return
+
+                page_is_all_old = dated_rows > 0 and older_than_window == dated_rows
+                if page_is_all_old or len(rows) < page_size:
+                    break
+
+    # ------------------------------------------------------------------
+    def _identifier_of(self, row: dict) -> str:
+        """식별자. 전용 필드가 없으면 URL 의 쿼리 파라미터에서 꺼냅니다.
+
+        NARS 현안분석처럼 목록에 ID 필드가 없고 파일 URL 에만
+        `?doc_id=...` 로 들어 있는 경우가 있습니다.
+        """
+        value = clean_whitespace(str(_first(row, self.field_map.get("identifier", ""), "") or ""))
+        if value:
+            return value
+
+        id_param = str(getattr(self.config, "assembly_id_param", "") or "")
+        if not id_param:
+            return ""
+        for field in ("download_url", "landing_url"):
+            url = clean_whitespace(str(_first(row, self.field_map.get(field, ""), "") or ""))
+            if not url:
                 continue
-
-            code, message = _result_status(data)
-            if code and not code.startswith(RESULT_OK):
-                level = logger.info if code.startswith(RESULT_NO_DATA) else logger.warning
-                level("[%s] 응답 코드 %s: %s", self.config.source_id, code, message)
-                if not code.startswith(RESULT_NO_DATA):
-                    continue
-
-            rows = _extract_rows(data)
-            if not rows:
-                logger.warning(
-                    "[%s] 레코드를 찾지 못했습니다. 응답 최상위 키: %s",
-                    self.config.source_id, sorted(data)[:20] if isinstance(data, dict) else type(data),
-                )
-                continue
-
-            for row in rows:
-                identifier = _first(row, self.field_map.get("identifier", ""), "")
-                key_value = identifier or _title_of(row, self.field_map)
-                if not key_value or key_value in seen:
-                    continue
-
-                published = parse_date(_first(row, self.field_map.get("publication_date", ""), ""))
-                # 서버 쪽 기간 필터를 확인하기 전까지는 여기서 거릅니다.
-                if published and not (since <= published <= until):
-                    continue
-
-                seen.add(key_value)
-                yield RawItem(
-                    source_id=self.config.source_id, payload=row, discovered_by_query=query
-                )
-                emitted += 1
-                if emitted >= self._limit():
-                    return
+            found = parse_qs(urlparse(url).query).get(id_param)
+            if found and found[0]:
+                return clean_whitespace(found[0])
+        return ""
 
     # ------------------------------------------------------------------
     def normalize(self, raw: RawItem) -> Resource | None:
@@ -160,7 +204,7 @@ class AssemblyOpenConnector(SourceConnector):
             )
             return None
 
-        identifier = clean_whitespace(str(_first(row, fields.get("identifier", ""), "")))
+        identifier = self._identifier_of(row)
         landing = clean_whitespace(str(_first(row, fields.get("landing_url", ""), "")))
         template = str(getattr(self.config, "landing_url_template", "") or "")
         if not landing and template and identifier:

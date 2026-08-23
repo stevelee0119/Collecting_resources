@@ -354,16 +354,16 @@ sources:
     priority: 2
     enabled: true
     access_methods:
-      # 운영자가 제시한 열린국회정보 API 주소입니다.
-      # 이 개발 환경에서 해당 도메인 접속이 차단되어 제공 데이터·응답 필드를
-      # 직접 확인하지 못했으므로 PENDING_VERIFICATION 을 유지합니다.
-      # 확인: 브라우저에서 ?KEY=sample&Type=json&pIndex=1&pSize=5 호출
+      # NARS 현안분석 목록 API. 운영자가 실제 응답(KEY=sample)을 확인해
+      # 제공 데이터와 응답 필드명이 모두 확정되었습니다 (2026-08-23).
+      # 확인된 응답: list_total_count 753, RESULT.CODE INFO-000,
+      # row 필드 = BOOKNM / PDFFILEURL / VIEWERURL / INSERTDT
       - type: OPEN_API
         auth_type: API_KEY
         credential_required: true
         credential_env_var: ASSEMBLY_API_KEY
         endpoint: "https://open.assembly.go.kr/portal/openapi/nvkfeqbsacvlzjmea"
-        verification_status: PENDING_VERIFICATION
+        verification_status: VERIFIED
         verified_source: "https://open.assembly.go.kr/portal/openapi/openApiDevPage.do"
         verified_at: "2026-08-23"
         verified_method: operator_input
@@ -382,28 +382,31 @@ sources:
     assembly_query_param: ""
     # API 마다 요구하는 고정 파라미터가 있으면 여기에 넣습니다.
     assembly_static_params: {}
-    landing_url_template: "https://www.nars.go.kr/report/view.do?cmsCode=CM0043&brdSeq={id}"
-    # 응답 필드명은 아직 대조하지 못했습니다. 제목을 못 읽으면 Connector 가
-    # 실제 응답 필드 목록을 경고 로그로 남기므로, 그 값을 보고 채우십시오.
+    # 목록에 ID 필드가 없고 PDF URL 의 doc_id 로만 식별됩니다.
+    # 예: fileDownload2.do?doc_id=1P-iU0ZDsFz&fileName=...
+    assembly_id_param: "doc_id"
+    # 2026-08-23 실제 응답으로 확인한 필드명입니다.
+    # 제공 필드는 네 개뿐이며 저자·초록·문서유형은 응답에 없습니다.
     field_map:
-      title: ""
-      authors: ""
-      publisher: ""
-      publication_date: ""
-      registered_date: ""
-      identifier: ""
-      landing_url: ""
-      download_url: ""
-      abstract: ""
-      document_type: ""
+      title: "BOOKNM"
+      publication_date: "INSERTDT"
+      registered_date: "INSERTDT"
+      landing_url: "VIEWERURL"
+      download_url: "PDFFILEURL"
     notes: >-
-      [2026-08-23 열린국회정보로 전환]
+      [2026-08-23 열린국회정보로 전환 — 응답 확인 완료]
+      제공 자료는 NARS 현안분석 보고서 목록입니다(전체 753건, 최신순).
       인증키가 공공데이터포털 키와 다릅니다. 열린국회정보에서 별도 발급받아
       ASSEMBLY_API_KEY 로 등록하십시오(계정당 최대 10개 발급, KEY 파라미터로 전달).
-      응답 구조는 { "<API_ID>": [ {head:[...]}, {row:[...]} ] } 형태가 관례이나
-      공식 문서로 대조하지 못해, Connector 가 row 목록을 관대하게 찾고 실패 시
-      실제 응답 키를 경고로 남기도록 했습니다. 첫 실행 로그를 보고 field_map 을
-      채우면 코드 수정 없이 동작합니다.
+      응답 필드는 BOOKNM(제목)·PDFFILEURL(원문 PDF)·VIEWERURL(뷰어)·INSERTDT(등록일)
+      네 개뿐입니다. **저자·초록·문서유형은 제공되지 않습니다.**
+      요약은 PDF 원문에서 추출해야 하므로 summary_basis 가 FULLTEXT 또는
+      METADATA_ONLY 로 갈립니다.
+      INSERTDT 는 등록일이지만 제목의 발행 표기(예: 426호-20260811)와 일치해
+      발행일로도 씁니다.
+      VIEWERURL 은 DRM 뷰어(drm.nars.go.kr:7003, http)라 링크 검증이 실패할 수
+      있습니다. 원문 확보는 PDFFILEURL 로 합니다.
+      검색어 파라미터는 제공되지 않아 목록 전체를 받아 기간·주제로 거릅니다.
       대체 경로(공공데이터포털): apis.data.go.kr/9735000/PublicationService/getResearchReportList
       — 2026-08-23 호출 시 SERVICE_KEY_IS_NOT_REGISTERED_ERROR(403). 같은 키로
       prism 은 성공하므로 키가 아니라 해당 데이터셋 활용신청 미승인입니다.

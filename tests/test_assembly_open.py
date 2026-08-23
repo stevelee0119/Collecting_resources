@@ -100,8 +100,6 @@ def test_key_is_sent_and_rows_are_read(settings, assembly_server, monkeypatch):
     assert resource is not None
     assert resource.title_original == "군사법원 관할 개편 검토"
     assert resource.official_identifier == "nars:1001"
-    # landing_url_template 이 식별자로 채워집니다.
-    assert resource.landing_url.endswith("brdSeq=1001")
 
 
 def test_title_is_recovered_when_field_map_is_empty(settings, assembly_server, monkeypatch):
@@ -216,3 +214,100 @@ def test_out_of_range_dates_are_filtered(settings, assembly_server, monkeypatch)
 
     assert len(items) == 1
     assert items[0].payload["REPORT_ID"] == "4002"
+
+
+# ---------------------------------------------------------------------------
+# 운영자가 확인한 실제 응답 (2026-08-23, KEY=sample)
+# ---------------------------------------------------------------------------
+
+REAL_ROW = {
+    "PDFFILEURL": (
+        "http://www.nars.go.kr/fileDownload2.do?doc_id=1P-iU0ZDsFz&fileName="
+        "(NARS%20%ED%98%84%EC%95%88%EB%B6%84%EC%84%9D%20426%ED%98%B8-20260811).pdf"
+    ),
+    "VIEWERURL": (
+        "http://drm.nars.go.kr:7003/sd/imageviewer?DocId=1P-iU0ZDsFz&ViewerYn=Y"
+    ),
+    "BOOKNM": "한국 민주주의, 지수로 읽는 성과와 한계 주요 민주주의 지수 비교를 통한 다차원적 진단",
+    "INSERTDT": "2026-08-11",
+}
+
+
+def test_real_sample_response_is_parsed(settings, assembly_server, monkeypatch):
+    """운영자가 확인한 실제 응답을 그대로 처리해야 합니다.
+
+    제공 필드는 BOOKNM / PDFFILEURL / VIEWERURL / INSERTDT 네 개뿐이고
+    **식별자 필드가 없습니다.** doc_id 를 PDF URL 에서 꺼내 씁니다.
+    """
+    state, endpoint = assembly_server
+    state["payload"] = _envelope([REAL_ROW])
+    # sources.yaml 의 설정을 그대로 사용합니다 (오버라이드 없음).
+    connector, client = _connector(settings, endpoint, monkeypatch)
+    try:
+        items = list(connector.discover(date(2026, 8, 1), date(2026, 8, 31),
+                                        connector.prepare_queries()[:1]))
+    finally:
+        client.close()
+
+    assert len(items) == 1
+    resource = connector.normalize(items[0])
+    assert resource is not None
+    assert resource.title_original.startswith("한국 민주주의")
+    # 목록에 ID 필드가 없으므로 PDF URL 의 doc_id 를 식별자로 씁니다.
+    assert resource.official_identifier == "nars:1P-iU0ZDsFz"
+    assert resource.publication_date == date(2026, 8, 11)
+    assert resource.download_url.startswith("http://www.nars.go.kr/fileDownload2.do")
+    assert resource.landing_url.startswith("http://drm.nars.go.kr")
+    assert resource.publisher == "국회입법조사처"
+
+
+def test_same_document_is_not_emitted_twice(settings, assembly_server, monkeypatch):
+    """doc_id 가 같으면 한 번만 내보내야 합니다."""
+    state, endpoint = assembly_server
+    state["payload"] = _envelope([REAL_ROW, dict(REAL_ROW)])
+    connector, client = _connector(settings, endpoint, monkeypatch)
+    try:
+        items = list(connector.discover(date(2026, 8, 1), date(2026, 8, 31),
+                                        connector.prepare_queries()[:1]))
+    finally:
+        client.close()
+
+    assert len(items) == 1
+
+
+def test_paging_stops_once_a_page_is_entirely_older(settings, assembly_server, monkeypatch):
+    """기간 이전만 담긴 페이지가 나오면 더 조회하지 않습니다."""
+    state, endpoint = assembly_server
+    old_rows = [
+        {**REAL_ROW, "PDFFILEURL": f"http://x/f?doc_id=OLD{i}", "INSERTDT": "2020-01-01"}
+        for i in range(3)
+    ]
+    state["payload"] = _envelope(old_rows)
+    connector, client = _connector(settings, endpoint, monkeypatch)
+    try:
+        items = list(connector.discover(date(2026, 8, 1), date(2026, 8, 31),
+                                        connector.prepare_queries()[:1]))
+    finally:
+        client.close()
+
+    assert items == []
+    # 첫 페이지에서 멈춰야 합니다.
+    assert len(state["requests"]) == 1
+
+
+def test_out_of_order_page_does_not_lose_valid_rows(settings, assembly_server, monkeypatch):
+    """정렬이 어긋나도 페이지 중간에서 끊어 유효한 레코드를 잃지 않아야 합니다."""
+    state, endpoint = assembly_server
+    state["payload"] = _envelope([
+        {**REAL_ROW, "PDFFILEURL": "http://x/f?doc_id=OLD", "INSERTDT": "2020-01-01"},
+        {**REAL_ROW, "PDFFILEURL": "http://x/f?doc_id=NEW", "INSERTDT": "2026-08-15"},
+    ])
+    connector, client = _connector(settings, endpoint, monkeypatch)
+    try:
+        items = list(connector.discover(date(2026, 8, 1), date(2026, 8, 31),
+                                        connector.prepare_queries()[:1]))
+    finally:
+        client.close()
+
+    assert len(items) == 1
+    assert "doc_id=NEW" in items[0].payload["PDFFILEURL"]

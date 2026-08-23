@@ -460,7 +460,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 ### 국회입법조사처 (`nars`)
 
 - **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `ASSEMBLY_API_KEY` 설정
-- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `ASSEMBLY_API_KEY` / 확인상태: `PENDING_VERIFICATION`
+- **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `ASSEMBLY_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://open.assembly.go.kr/portal/openapi/openApiDevPage.do (2026-08-23, 운영자가 직접 입력 (공식 문서 대조 전))
 
 | 항목 | 내용 |
@@ -479,15 +479,13 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | 12. 환경변수명 | `ASSEMBLY_API_KEY` |
 | 13. 동작 확인 방법 | `python main.py run --daily --source nars --dry-run` |
 | 14. 키 만료·갱신·회수 | 공식 문서 확인 필요 |
-| 15. 이용약관·자동수집 주의사항 | **인증키가 공공데이터포털 키와 다릅니다.** 열린국회정보 전용 키를 발급받아 ASSEMBLY_API_KEY 로 등록하고, KEY 파라미터로 전달합니다. API 주소는 난수형 ID 를 씁니다(.../portal/openapi/{API_ID}). 응답 필드명은 아직 대조하지 못했으므로 첫 실행 로그에 찍히는 실제 응답 필드를 보고 sources.yaml 의 field_map 을 채우십시오. 브라우저에서 ?KEY=sample&Type=json&pIndex=1&pSize=5 로 미리 확인할 수 있습니다. 공공데이터포털 경로는 2026-08-23 기준 활용신청 미승인(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)이라 대체 경로로만 기록했습니다. |
+| 15. 이용약관·자동수집 주의사항 | **인증키가 공공데이터포털 키와 다릅니다.** 열린국회정보 전용 키를 발급받아 ASSEMBLY_API_KEY 로 등록하고, KEY 파라미터로 전달합니다. 제공 자료는 NARS 현안분석 보고서 목록입니다(2026-08-23 기준 753건, 최신순). 응답 필드는 BOOKNM(제목)·PDFFILEURL(원문 PDF)·VIEWERURL(뷰어)·INSERTDT(등록일) 네 개뿐이며 저자·초록·문서유형은 제공되지 않습니다. 목록에 ID 필드가 없어 PDF URL 의 doc_id 를 식별자로 씁니다. 검색어 파라미터가 없어 목록 전체를 받아 기간·주제로 거릅니다. VIEWERURL 은 DRM 뷰어(http, 포트 7003)라 링크 검증이 실패할 수 있으며 원문 확보는 PDFFILEURL 로 합니다. 공공데이터포털 경로는 2026-08-23 기준 활용신청 미승인(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)이라 대체 경로로만 기록했습니다. |
 | 16. 공식 문서 최종 확인일 | 2026-08-23 |
 
 **설정된 엔드포인트**
   - `https://open.assembly.go.kr/portal/openapi/nvkfeqbsacvlzjmea`
 
 **수집 정책**: `download_policy: manual_review` / `robots_policy: respect` / `rate_limit_rps: 0.5`
-
-> ⚠ **구현 직전 재확인 필요** — 아래 접근방식은 공식 문서로 확정되지 않았습니다: OPEN_API
 
 ---
 

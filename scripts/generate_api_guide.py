@@ -179,11 +179,14 @@ SOURCE_NOTES: dict[str, dict[str, Any]] = {
         "cautions": (
             "**인증키가 공공데이터포털 키와 다릅니다.** 열린국회정보 전용 키를 "
             "발급받아 ASSEMBLY_API_KEY 로 등록하고, KEY 파라미터로 전달합니다. "
-            "API 주소는 난수형 ID 를 씁니다(.../portal/openapi/{API_ID}). "
-            "응답 필드명은 아직 대조하지 못했으므로 첫 실행 로그에 찍히는 실제 "
-            "응답 필드를 보고 sources.yaml 의 field_map 을 채우십시오. "
-            "브라우저에서 ?KEY=sample&Type=json&pIndex=1&pSize=5 로 미리 확인할 수 "
-            "있습니다. 공공데이터포털 경로는 2026-08-23 기준 활용신청 미승인"
+            "제공 자료는 NARS 현안분석 보고서 목록입니다(2026-08-23 기준 753건, 최신순). "
+            "응답 필드는 BOOKNM(제목)·PDFFILEURL(원문 PDF)·VIEWERURL(뷰어)·"
+            "INSERTDT(등록일) 네 개뿐이며 저자·초록·문서유형은 제공되지 않습니다. "
+            "목록에 ID 필드가 없어 PDF URL 의 doc_id 를 식별자로 씁니다. "
+            "검색어 파라미터가 없어 목록 전체를 받아 기간·주제로 거릅니다. "
+            "VIEWERURL 은 DRM 뷰어(http, 포트 7003)라 링크 검증이 실패할 수 있으며 "
+            "원문 확보는 PDFFILEURL 로 합니다. "
+            "공공데이터포털 경로는 2026-08-23 기준 활용신청 미승인"
             "(SERVICE_KEY_IS_NOT_REGISTERED_ERROR)이라 대체 경로로만 기록했습니다."
         ),
     },
