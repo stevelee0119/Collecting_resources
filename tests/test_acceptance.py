@@ -389,3 +389,70 @@ def test_riss_has_no_bibliographic_search_endpoint(registry):
     riss = registry.get("riss")
     assert riss.method("OPEN_API").endpoint == ""
     assert riss.download_policy == DownloadPolicy.LINK_ONLY
+
+
+# ---------------------------------------------------------------------------
+# 인증정보 배선 (환경변수 → Connector → 요청)
+# ---------------------------------------------------------------------------
+
+CREDENTIAL_TARGETS = [
+    ("kci", "OPEN_API", "KCI_API_KEY"),
+    ("law_go_kr", "OPEN_API", "LAW_GO_KR_OC"),
+    ("prism", "OPEN_API", "DATA_GO_KR_API_KEY"),
+    ("scienceon", "OPEN_API", "SCIENCEON_API_KEY"),
+    ("core", "OPEN_API", "CORE_API_KEY"),
+    ("openalex", "OPEN_API", "OPENALEX_API_KEY"),
+    ("semantic_scholar", "OPEN_API", "SEMANTIC_SCHOLAR_API_KEY"),
+    ("zenodo", "OPEN_API", "ZENODO_API_KEY"),
+    ("doaj", "OPEN_API", "DOAJ_API_KEY"),
+]
+
+
+@pytest.mark.parametrize(("source_id", "method_type", "env_var"), CREDENTIAL_TARGETS)
+def test_credential_env_var_reaches_the_request(
+    source_id, method_type, env_var, monkeypatch, credential_probe
+):
+    """`.env` 의 값이 실제 HTTP 요청까지 전달되어야 합니다."""
+    from datetime import date
+
+    secret = f"PROBE-{source_id.upper()}"
+    monkeypatch.setenv(env_var, secret)
+    if source_id == "scienceon":
+        monkeypatch.setenv("SCIENCEON_CLIENT_ID", "PROBE-CLIENT")
+
+    requests = credential_probe(source_id, method_type, date(2026, 8, 1), date(2026, 8, 22))
+    assert requests, f"{source_id}: 요청이 전송되지 않았습니다."
+
+    import json
+
+    # KCI 처럼 인증 불필요 경로(OAI-PMH)를 먼저 시도하는 소스가 있으므로
+    # 첫 요청이 아니라 전체 요청 중 하나에 값이 실렸는지 확인합니다.
+    blob = json.dumps(requests, ensure_ascii=False)
+    assert secret in blob, (
+        f"{source_id}: {len(requests)}건의 요청 어디에도 {env_var} 값이 실리지 않았습니다."
+    )
+
+
+def test_scienceon_sends_client_id_with_token(monkeypatch, credential_probe):
+    """ScienceON 은 token 과 client_id 를 함께 보내야 합니다."""
+    from datetime import date
+
+    monkeypatch.setenv("SCIENCEON_API_KEY", "PROBE-TOKEN")
+    monkeypatch.setenv("SCIENCEON_CLIENT_ID", "PROBE-CLIENT")
+
+    requests = credential_probe("scienceon", "OPEN_API", date(2026, 8, 1), date(2026, 8, 22))
+    assert requests
+    queries = [r["query"] for r in requests]
+    assert any(q.get("token") == "PROBE-TOKEN" for q in queries), "token 미전송"
+    assert any(q.get("client_id") == "PROBE-CLIENT" for q in queries), "client_id 미전송"
+
+
+def test_missing_credential_is_not_sent_as_empty_string(monkeypatch, credential_probe):
+    """인증정보가 없으면 빈 값으로 호출하지 않고 소스를 건너뜁니다."""
+    from datetime import date
+
+    from src.connectors import CredentialMissingError
+
+    monkeypatch.delenv("CORE_API_KEY", raising=False)
+    with pytest.raises(CredentialMissingError):
+        credential_probe("core", "OPEN_API", date(2026, 8, 1), date(2026, 8, 22))

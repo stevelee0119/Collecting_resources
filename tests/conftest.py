@@ -113,3 +113,80 @@ def _clean_env(monkeypatch):
 
 def cleanup(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
+
+
+@pytest.fixture
+def credential_probe(settings):
+    """인증정보가 실제 HTTP 요청까지 전달되는지 확인하는 프로브.
+
+    소스의 엔드포인트를 로컬 모의 서버로 바꿔 요청 내용을 가로챕니다.
+    (외부 API 로 나가지 않습니다.)
+    """
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import parse_qs, urlparse
+
+    from src.connectors import ConnectorContext, build_connector
+    from src.discovery.query_expander import QueryExpander
+    from src.http_client import PoliteClient
+
+    captured: list[dict] = []
+
+    class _Probe(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def _record(self, body: bytes = b"") -> None:
+            parsed = urlparse(self.path)
+            captured.append({
+                "path": parsed.path,
+                "query": {k: v[0] for k, v in parse_qs(parsed.query).items()},
+                "headers": {k.lower(): v for k, v in self.headers.items()},
+                "body": body.decode("utf-8", "ignore")[:400],
+            })
+            payload = b'{"results":[],"message":{"items":[]},"data":[],"hits":{"hits":[]}}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def do_GET(self):  # noqa: N802
+            self._record()
+
+        def do_POST(self):  # noqa: N802
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            self._record(self.rfile.read(length) if length else b"")
+
+    httpd = HTTPServer(("127.0.0.1", 0), _Probe)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    clients: list[PoliteClient] = []
+
+    def probe(source_id: str, method_type: str, since, until) -> list[dict]:  # noqa: ARG001
+        config = settings.sources.get(source_id)
+        # 이 소스의 모든 엔드포인트를 모의 서버로 돌려 외부 호출을 막습니다.
+        for m in config.access_methods:
+            if m.endpoint:
+                m.endpoint = f"http://127.0.0.1:{httpd.server_port}/{source_id}"
+
+        captured.clear()
+        client = PoliteClient(user_agent="probe/1.0", rate_limit_rps=0, respect_robots=False)
+        clients.append(client)
+        connector = build_connector(
+            config,
+            ConnectorContext(
+                app=settings.app,
+                client=client,
+                expander=QueryExpander(settings.search_terms),
+                max_items=1,
+            ),
+        )
+        list(connector.discover(since, until, connector.prepare_queries()[:1]))
+        return list(captured)
+
+    yield probe
+
+    for client in clients:
+        client.close()
+    httpd.shutdown()
+    httpd.server_close()

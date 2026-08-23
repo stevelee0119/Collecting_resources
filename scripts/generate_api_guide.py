@@ -314,6 +314,53 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 """
 
 
+#: 인증정보가 실제로 설정되었는지 확인할 때 함께 필요한 부가 환경변수
+COMPANION_ENV_VARS: dict[str, list[str]] = {
+    "scienceon": ["SCIENCEON_CLIENT_ID"],
+}
+
+
+def _action_status(source: Any, method: Any) -> tuple[str, str]:
+    """소스별 조치 현황을 판정합니다.
+
+    Returns:
+        (상태 아이콘+라벨, 남은 조치 설명)
+    """
+    from src.config_loader import get_secret  # noqa: PLC0415
+
+    needs_key = method.credential_required and method.credential_env_var
+    has_key = bool(get_secret(method.credential_env_var)) if needs_key else True
+
+    missing_companions = [
+        v for v in COMPANION_ENV_VARS.get(source.source_id, []) if not get_secret(v)
+    ]
+
+    if not method.endpoint:
+        if method.verification_status == "VERIFIED":
+            # 공식적으로 해당 API 가 없다고 확인된 경우 (예: RISS, SSRN)
+            return "➖ 대상 아님", "자동수집 대상이 아닙니다. 추가 조치 불필요."
+        return (
+            "⬜ 조치 필요",
+            f"공식 문서({source.auth_docs_url})에서 상세주소를 확인해 "
+            f"`config/sources.yaml` 의 `endpoint` 에 입력",
+        )
+
+    if not needs_key:
+        return "✅ 완료", "별도 발급 없이 사용 가능"
+
+    if has_key and not missing_companions:
+        return "✅ 완료", f"`{method.credential_env_var}` 설정 확인됨"
+
+    if has_key and missing_companions:
+        return (
+            "🟡 일부 완료",
+            f"`{method.credential_env_var}` 는 설정됨. "
+            f"추가 필요: {', '.join(f'`{v}`' for v in missing_companions)}",
+        )
+
+    return "⬜ 조치 필요", f"발급 후 `.env` 에 `{method.credential_env_var}` 설정"
+
+
 def _method_label(verified_method: str) -> str:
     """무엇을 근거로 확정했는지 (§18.4 감사가능성)."""
     return {
@@ -339,6 +386,8 @@ def _source_section(source: Any, notes: dict[str, Any], today: str) -> str:
 
     methods = []
     for method in source.access_methods:
+        status, todo = _action_status(source, method)
+        methods.append(f"- **조치 현황: {status}** — {todo}")
         env = f"`{method.credential_env_var}`" if method.credential_env_var else "없음"
         methods.append(
             f"- **{method.type}** — 인증: {_auth_label(method.auth_type)} / "
@@ -431,7 +480,45 @@ def build_markdown(settings: Settings) -> str:
 > - Source Registry 버전: `{registry.registry_version}`
 > - 대상 소스: 전체 {len(registry.sources)}개 (사전 발급·승인 필요 {len(needs_credentials)}개)
 
-## 0. 읽기 전 안내
+## 0. 조치 현황 한눈에 보기
+
+> 이 표는 문서를 생성한 시점(`python main.py api-guide` 실행 환경)에서
+> 환경변수가 실제로 읽히는지 확인한 결과입니다.
+
+STATUS_SUMMARY_PLACEHOLDER
+
+### 상태 표시의 의미
+
+| 표시 | 의미 |
+| --- | --- |
+| ✅ 완료 | 바로 사용 가능 (인증 불필요이거나 인증정보가 설정되어 있음) |
+| 🟡 일부 완료 | 인증정보 일부만 설정됨 — 남은 값을 추가해야 동작 |
+| ⬜ 조치 필요 | 발급 또는 엔드포인트 입력이 필요 |
+| ➖ 대상 아님 | 공식적으로 자동수집 대상이 아님 (추가 조치 불필요) |
+
+---
+
+## 0-1. 인증정보를 프로그램에 전달하는 방법
+
+발급받은 값은 **프로그램이 읽을 수 있는 위치**에 있어야 합니다.
+값을 어디에 보관했는지에 따라 동작 여부가 달라집니다.
+
+| 보관 위치 | 프로그램이 읽는가 | 비고 |
+| --- | --- | --- |
+| 프로젝트 루트의 `.env` | **읽음** | 로컬 실행 시 표준 방법 (`.gitignore` 로 제외됨) |
+| OS 환경변수 (`export` / `setx`) | **읽음** | 서버·스케줄러 운영 시 |
+| GitHub **Secrets** + Actions 워크플로 | 워크플로가 `env:` 로 주입하면 읽음 | 워크플로 파일이 있어야 함 |
+| GitHub **Variables** | **읽지 않음** | 아래 경고 참조 |
+
+> ⚠ **GitHub Actions Variables 에 API Key 를 넣지 마십시오.**
+> Variables 는 **평문으로 저장**되며 저장소 읽기 권한이 있는 사람이 볼 수 있고
+> 워크플로 로그에도 그대로 남습니다. API Key·토큰·비밀번호는 반드시
+> **Secrets** 에 저장하십시오. 또한 Variables/Secrets 는 GitHub Actions 실행 중에만
+> 존재하므로, 로컬이나 별도 서버에서 실행할 때는 `.env` 또는 OS 환경변수가 필요합니다.
+
+---
+
+## 0-2. 읽기 전 안내
 
 이 가이드는 **비개발자도 인증정보를 직접 발급받아 시스템에 연결할 수 있도록** 작성되었습니다.
 
@@ -470,8 +557,8 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ## 1. 인증정보가 필요한 소스 요약
 
-| 소스 | 인증방식 | 환경변수 | 승인 필요 | 확인상태 | 확인근거 |
-| --- | --- | --- | --- | --- | --- |
+| 소스 | 인증방식 | 환경변수 | 조치 현황 | 남은 조치 |
+| --- | --- | --- | --- | --- |
 """
 
     summary_rows = []
@@ -479,12 +566,11 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
         for method in source.access_methods:
             if not (method.credential_required or method.auth_type != AuthType.NONE):
                 continue
+            status, todo = _action_status(source, method)
             summary_rows.append(
                 f"| {source.name} (`{source.source_id}`) | {method.type} / {_auth_label(method.auth_type)} "
                 f"| `{method.credential_env_var or '-'}` "
-                f"| {'예' if method.auth_type == AuthType.INSTITUTION_APPROVAL else '신청 필요'} "
-                f"| `{method.verification_status}` "
-                f"| {method.verified_source or '-'} |"
+                f"| {status} | {todo} |"
             )
 
     keyless_rows = "\n".join(
@@ -493,8 +579,44 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
         for s in keyless
     ) or "- (없음)"
 
+    # 조치 현황 요약
+    done, partial, todo_list, na = [], [], [], []
+    for source in registry.sources:
+        for method in source.access_methods:
+            status, todo = _action_status(source, method)
+            label = f"{source.name} (`{source.source_id}` / {method.type})"
+            if status.startswith("✅"):
+                done.append(label)
+            elif status.startswith("🟡"):
+                partial.append(f"{label} — {todo}")
+            elif status.startswith("➖"):
+                na.append(label)
+            else:
+                todo_list.append(f"{label} — {todo}")
+
+    def bullets(items: list[str]) -> str:
+        return "\n".join(f"- {i}" for i in items) if items else "- (없음)"
+
+    status_summary = "\n".join([
+        f"**✅ 조치 완료 ({len(done)}건)** — 바로 사용 가능",
+        "",
+        bullets(done),
+        "",
+        f"**🟡 일부 완료 ({len(partial)}건)** — 남은 값 추가 필요",
+        "",
+        bullets(partial),
+        "",
+        f"**⬜ 추가 조치 필요 ({len(todo_list)}건)**",
+        "",
+        bullets(todo_list),
+        "",
+        f"**➖ 자동수집 대상 아님 ({len(na)}건)** — 조치 불필요",
+        "",
+        bullets(na),
+    ])
+
     body = [
-        header.rstrip("\n"),
+        header.rstrip("\n").replace("STATUS_SUMMARY_PLACEHOLDER", status_summary),
         "\n".join(summary_rows),
         "",
         "## 2. 별도 발급 없이 사용 가능한 소스",

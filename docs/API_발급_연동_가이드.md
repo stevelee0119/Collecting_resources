@@ -3,11 +3,83 @@
 > 이 문서는 `config/sources.yaml` 에서 **자동 생성**됩니다.
 > 수정하려면 `config/sources.yaml` 을 고친 뒤 `python main.py api-guide` 를 다시 실행하십시오.
 >
-> - 생성일: 2026-08-22
+> - 생성일: 2026-08-23
 > - Source Registry 버전: `2026.08.22-1`
 > - 대상 소스: 전체 21개 (사전 발급·승인 필요 13개)
 
-## 0. 읽기 전 안내
+## 0. 조치 현황 한눈에 보기
+
+> 이 표는 문서를 생성한 시점(`python main.py api-guide` 실행 환경)에서
+> 환경변수가 실제로 읽히는지 확인한 결과입니다.
+
+**✅ 조치 완료 (6건)** — 바로 사용 가능
+
+- KCI 한국학술지인용색인 (`kci` / OAI_PMH)
+- Crossref (`crossref` / OPEN_API)
+- Semantic Scholar (`semantic_scholar` / OPEN_API)
+- DOAJ (`doaj` / OPEN_API)
+- arXiv (`arxiv` / OPEN_API)
+- Zenodo (`zenodo` / OPEN_API)
+
+**🟡 일부 완료 (0건)** — 남은 값 추가 필요
+
+- (없음)
+
+**⬜ 추가 조치 필요 (15건)**
+
+- KCI 한국학술지인용색인 (`kci` / OPEN_API) — 발급 후 `.env` 에 `KCI_API_KEY` 설정
+- ScienceON (KISTI) (`scienceon` / OPEN_API) — 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정
+- NKIS 국가정책연구포털 (`nkis` / OPEN_API) — 공식 문서(https://www.nkis.re.kr/openDesc.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- PRISM 정책연구관리시스템 (`prism` / OPEN_API) — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
+- 국가법령정보 공동활용 (`law_go_kr` / OPEN_API) — 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정
+- 국회입법조사처 (`nars` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15125970/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 사법정책연구원 (`jpri` / RSS) — 공식 문서(https://jpri.scourt.go.kr/post/postList.do?boardSeq=7&menuSeq=11&lang=ko)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 법무연수원 (`ioj` / RSS) — 공식 문서(https://book.ioj.go.kr/library)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 한국형사·법무정책연구원 (`kicj` / RSS) — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 한국형사·법무정책연구원 (`kicj` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 국가인권위원회 (`humanrights` / RSS) — 공식 문서(https://library.humanrights.go.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- 한국국방연구원 (KIDA) (`kida` / RSS) — 공식 문서(https://kida.re.kr/frt/contents/frtContents.do?sidx=2127&depth=3)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- OpenAlex (`openalex` / OPEN_API) — 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정
+- CORE (`core` / OPEN_API) — 발급 후 `.env` 에 `CORE_API_KEY` 설정
+- Unpaywall (`unpaywall` / OPEN_API) — 발급 후 `.env` 에 `CONTACT_EMAIL` 설정
+
+**➖ 자동수집 대상 아님 (2건)** — 조치 불필요
+
+- RISS 학술연구정보서비스 (`riss` / OPEN_API)
+- SSRN (`ssrn` / NONE)
+
+### 상태 표시의 의미
+
+| 표시 | 의미 |
+| --- | --- |
+| ✅ 완료 | 바로 사용 가능 (인증 불필요이거나 인증정보가 설정되어 있음) |
+| 🟡 일부 완료 | 인증정보 일부만 설정됨 — 남은 값을 추가해야 동작 |
+| ⬜ 조치 필요 | 발급 또는 엔드포인트 입력이 필요 |
+| ➖ 대상 아님 | 공식적으로 자동수집 대상이 아님 (추가 조치 불필요) |
+
+---
+
+## 0-1. 인증정보를 프로그램에 전달하는 방법
+
+발급받은 값은 **프로그램이 읽을 수 있는 위치**에 있어야 합니다.
+값을 어디에 보관했는지에 따라 동작 여부가 달라집니다.
+
+| 보관 위치 | 프로그램이 읽는가 | 비고 |
+| --- | --- | --- |
+| 프로젝트 루트의 `.env` | **읽음** | 로컬 실행 시 표준 방법 (`.gitignore` 로 제외됨) |
+| OS 환경변수 (`export` / `setx`) | **읽음** | 서버·스케줄러 운영 시 |
+| GitHub **Secrets** + Actions 워크플로 | 워크플로가 `env:` 로 주입하면 읽음 | 워크플로 파일이 있어야 함 |
+| GitHub **Variables** | **읽지 않음** | 아래 경고 참조 |
+
+> ⚠ **GitHub Actions Variables 에 API Key 를 넣지 마십시오.**
+> Variables 는 **평문으로 저장**되며 저장소 읽기 권한이 있는 사람이 볼 수 있고
+> 워크플로 로그에도 그대로 남습니다. API Key·토큰·비밀번호는 반드시
+> **Secrets** 에 저장하십시오. 또한 Variables/Secrets 는 GitHub Actions 실행 중에만
+> 존재하므로, 로컬이나 별도 서버에서 실행할 때는 `.env` 또는 OS 환경변수가 필요합니다.
+
+---
+
+## 0-2. 읽기 전 안내
 
 이 가이드는 **비개발자도 인증정보를 직접 발급받아 시스템에 연결할 수 있도록** 작성되었습니다.
 
@@ -46,21 +118,21 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ## 1. 인증정보가 필요한 소스 요약
 
-| 소스 | 인증방식 | 환경변수 | 승인 필요 | 확인상태 | 확인근거 |
-| --- | --- | --- | --- | --- | --- |
-| KCI 한국학술지인용색인 (`kci`) | OPEN_API / API Key 필요 | `KCI_API_KEY` | 신청 필요 | `VERIFIED` | https://www.kci.go.kr/kciportal/po/openapi/openApiConnSamp.kci |
-| RISS 학술연구정보서비스 (`riss`) | OPEN_API / 기관 승인 필요 | `RISS_API_KEY` | 예 | `VERIFIED` | https://www.riss.kr/apicenter/apiMain.do |
-| ScienceON (KISTI) (`scienceon`) | OPEN_API / API Key 필요 | `SCIENCEON_API_KEY` | 신청 필요 | `VERIFIED` | https://scienceon.kisti.re.kr/apigateway/api/way/service/arti/serviceArtiSearchApi.do |
-| NKIS 국가정책연구포털 (`nkis`) | OPEN_API / API Key 필요 | `NKIS_API_KEY` | 신청 필요 | `PENDING_VERIFICATION` | https://www.nkis.re.kr/openSvcList.do |
-| PRISM 정책연구관리시스템 (`prism`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | 신청 필요 | `VERIFIED` | https://www.data.go.kr/data/15080254/openapi.do |
-| 국가법령정보 공동활용 (`law_go_kr`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | 신청 필요 | `VERIFIED` | https://open.law.go.kr/LSO/openApi/guideList.do |
-| 국회입법조사처 (`nars`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | 신청 필요 | `PENDING_VERIFICATION` | https://www.data.go.kr/data/15125970/openapi.do |
-| 한국형사·법무정책연구원 (`kicj`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | 신청 필요 | `PENDING_VERIFICATION` | https://www.data.go.kr/data/15140051/openapi.do |
-| OpenAlex (`openalex`) | OPEN_API / API Key 필요 | `OPENALEX_API_KEY` | 신청 필요 | `VERIFIED` | https://developers.openalex.org/api-reference/introduction |
-| Semantic Scholar (`semantic_scholar`) | OPEN_API / API Key 필요 | `SEMANTIC_SCHOLAR_API_KEY` | 신청 필요 | `VERIFIED` | https://api.semanticscholar.org/api-docs/graph |
-| CORE (`core`) | OPEN_API / API Key 필요 | `CORE_API_KEY` | 신청 필요 | `VERIFIED` | https://core.ac.uk/services/api |
-| Unpaywall (`unpaywall`) | OPEN_API / 불필요 | `CONTACT_EMAIL` | 신청 필요 | `VERIFIED` | https://unpaywall.org/products/api |
-| Zenodo (`zenodo`) | OPEN_API / API Key 필요 | `ZENODO_API_KEY` | 신청 필요 | `VERIFIED` | https://developers.zenodo.org |
+| 소스 | 인증방식 | 환경변수 | 조치 현황 | 남은 조치 |
+| --- | --- | --- | --- | --- |
+| KCI 한국학술지인용색인 (`kci`) | OPEN_API / API Key 필요 | `KCI_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `KCI_API_KEY` 설정 |
+| RISS 학술연구정보서비스 (`riss`) | OPEN_API / 기관 승인 필요 | `RISS_API_KEY` | ➖ 대상 아님 | 자동수집 대상이 아닙니다. 추가 조치 불필요. |
+| ScienceON (KISTI) (`scienceon`) | OPEN_API / API Key 필요 | `SCIENCEON_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정 |
+| NKIS 국가정책연구포털 (`nkis`) | OPEN_API / API Key 필요 | `NKIS_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.nkis.re.kr/openDesc.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
+| PRISM 정책연구관리시스템 (`prism`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정 |
+| 국가법령정보 공동활용 (`law_go_kr`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | ⬜ 조치 필요 | 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정 |
+| 국회입법조사처 (`nars`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15125970/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
+| 한국형사·법무정책연구원 (`kicj`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
+| OpenAlex (`openalex`) | OPEN_API / API Key 필요 | `OPENALEX_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정 |
+| Semantic Scholar (`semantic_scholar`) | OPEN_API / API Key 필요 | `SEMANTIC_SCHOLAR_API_KEY` | ✅ 완료 | 별도 발급 없이 사용 가능 |
+| CORE (`core`) | OPEN_API / API Key 필요 | `CORE_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `CORE_API_KEY` 설정 |
+| Unpaywall (`unpaywall`) | OPEN_API / 불필요 | `CONTACT_EMAIL` | ⬜ 조치 필요 | 발급 후 `.env` 에 `CONTACT_EMAIL` 설정 |
+| Zenodo (`zenodo`) | OPEN_API / API Key 필요 | `ZENODO_API_KEY` | ✅ 완료 | 별도 발급 없이 사용 가능 |
 
 ## 2. 별도 발급 없이 사용 가능한 소스
 
@@ -80,8 +152,10 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### KCI 한국학술지인용색인 (`kci`)
 
+- **조치 현황: ✅ 완료** — 별도 발급 없이 사용 가능
 - **OAI_PMH** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `VERIFIED`
   - 확인근거: https://www.kci.go.kr/kciportal/po/openapi/openDataOaiPmhView.kci (2026-08-22, 공식 문서 검색결과 기준)
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `KCI_API_KEY` 설정
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `KCI_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://www.kci.go.kr/kciportal/po/openapi/openApiConnSamp.kci (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -114,6 +188,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### RISS 학술연구정보서비스 (`riss`)
 
+- **조치 현황: ➖ 대상 아님** — 자동수집 대상이 아닙니다. 추가 조치 불필요.
 - **OPEN_API** — 인증: 기관 승인 필요 / 사전 발급 필요: 예 / 환경변수: `RISS_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://www.riss.kr/apicenter/apiMain.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -145,6 +220,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### ScienceON (KISTI) (`scienceon`)
 
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `SCIENCEON_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://scienceon.kisti.re.kr/apigateway/api/way/service/arti/serviceArtiSearchApi.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -176,6 +252,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### NKIS 국가정책연구포털 (`nkis`)
 
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.nkis.re.kr/openDesc.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `NKIS_API_KEY` / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://www.nkis.re.kr/openSvcList.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -209,6 +286,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### PRISM 정책연구관리시스템 (`prism`)
 
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `DATA_GO_KR_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://www.data.go.kr/data/15080254/openapi.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -240,6 +318,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 국가법령정보 공동활용 (`law_go_kr`)
 
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `LAW_GO_KR_OC` / 확인상태: `VERIFIED`
   - 확인근거: https://open.law.go.kr/LSO/openApi/guideList.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -271,6 +350,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 국회입법조사처 (`nars`)
 
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.data.go.kr/data/15125970/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `DATA_GO_KR_API_KEY` / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://www.data.go.kr/data/15125970/openapi.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -304,6 +384,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 사법정책연구원 (`jpri`)
 
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://jpri.scourt.go.kr/post/postList.do?boardSeq=7&menuSeq=11&lang=ko)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://jpri.scourt.go.kr/post/postList.do?boardSeq=7&menuSeq=11&lang=ko (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -337,6 +418,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 법무연수원 (`ioj`)
 
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://book.ioj.go.kr/library)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://book.ioj.go.kr/library (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -370,8 +452,10 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 한국형사·법무정책연구원 (`kicj`)
 
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://www.kicj.re.kr/ (2026-08-22, 공식 문서 검색결과 기준)
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.data.go.kr/data/15140051/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `DATA_GO_KR_API_KEY` / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://www.data.go.kr/data/15140051/openapi.do (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -405,6 +489,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 국가인권위원회 (`humanrights`)
 
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://library.humanrights.go.kr/)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://library.humanrights.go.kr/ (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -438,6 +523,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### 한국국방연구원 (KIDA) (`kida`)
 
+- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://kida.re.kr/frt/contents/frtContents.do?sidx=2127&depth=3)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
 - **RSS** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `PENDING_VERIFICATION`
   - 확인근거: https://kida.re.kr/frt/contents/frtContents.do?sidx=2127&depth=3 (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -471,6 +557,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### Crossref (`crossref`)
 
+- **조치 현황: ✅ 완료** — 별도 발급 없이 사용 가능
 - **OPEN_API** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: `CONTACT_EMAIL` / 확인상태: `VERIFIED`
   - 확인근거: https://www.crossref.org/documentation/retrieve-metadata/rest-api/rest-api-filters/ (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -502,6 +589,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### OpenAlex (`openalex`)
 
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `OPENALEX_API_KEY` 설정
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `OPENALEX_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://developers.openalex.org/api-reference/introduction (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -533,6 +621,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### Semantic Scholar (`semantic_scholar`)
 
+- **조치 현황: ✅ 완료** — 별도 발급 없이 사용 가능
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 아니오 / 환경변수: `SEMANTIC_SCHOLAR_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://api.semanticscholar.org/api-docs/graph (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -564,6 +653,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### CORE (`core`)
 
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `CORE_API_KEY` 설정
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `CORE_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://core.ac.uk/services/api (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -595,6 +685,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### Unpaywall (`unpaywall`)
 
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `CONTACT_EMAIL` 설정
 - **OPEN_API** — 인증: 불필요 / 사전 발급 필요: 예 / 환경변수: `CONTACT_EMAIL` / 확인상태: `VERIFIED`
   - 확인근거: https://unpaywall.org/products/api (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -626,6 +717,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### DOAJ (`doaj`)
 
+- **조치 현황: ✅ 완료** — 별도 발급 없이 사용 가능
 - **OPEN_API** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: `DOAJ_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://doaj.org/api/v4/docs (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -657,6 +749,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### arXiv (`arxiv`)
 
+- **조치 현황: ✅ 완료** — 별도 발급 없이 사용 가능
 - **OPEN_API** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `VERIFIED`
   - 확인근거: https://info.arxiv.org/help/api/index.html (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -688,6 +781,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### SSRN (`ssrn`)
 
+- **조치 현황: ➖ 대상 아님** — 자동수집 대상이 아닙니다. 추가 조치 불필요.
 - **NONE** — 인증: 불필요 / 사전 발급 필요: 아니오 / 환경변수: 없음 / 확인상태: `VERIFIED`
   - 확인근거: https://www.ssrn.com/index.cfm/en/terms-of-use/ (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -719,6 +813,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### Zenodo (`zenodo`)
 
+- **조치 현황: ✅ 완료** — 별도 발급 없이 사용 가능
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 아니오 / 환경변수: `ZENODO_API_KEY` / 확인상태: `VERIFIED`
   - 확인근거: https://developers.zenodo.org (2026-08-22, 공식 문서 검색결과 기준)
 
@@ -772,7 +867,7 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 | 13. 동작 확인 | `python main.py run --daily --source arxiv` 후 수신함 확인 |
 | 14. 키 갱신·회수 | Google Cloud Console → 사용자 인증 정보에서 클라이언트 폐기, 계정 보안 설정에서 액세스 권한 철회 |
 | 15. 주의사항 | `client_secret.json` 과 토큰 파일을 Git 에 커밋하지 마십시오. |
-| 16. 공식 문서 확인일 | `2026-08-22` |
+| 16. 공식 문서 확인일 | `2026-08-23` |
 
 `config/config.yaml` 에서 `notification.email.transport: "gmail_api"` 로 설정합니다.
 
@@ -821,4 +916,4 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 | `GMAIL_TOKEN_FILE` | Gmail OAuth 토큰 파일 경로 | Gmail API 사용 시 |
 | `ANTHROPIC_API_KEY` | LLM 요약(선택) | 선택 |
 
-> 마지막 생성: 2026-08-22 · `python main.py api-guide` 로 재생성할 수 있습니다.
+> 마지막 생성: 2026-08-23 · `python main.py api-guide` 로 재생성할 수 있습니다.
