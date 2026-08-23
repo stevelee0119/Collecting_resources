@@ -38,7 +38,7 @@ from ..database import Repository
 from ..dedup import DedupVerdict, Deduplicator
 from ..downloader import Downloader, OpenAccessResolver
 from ..extractors import ExtractedText, TextExtractor
-from ..http_client import build_client
+from ..http_client import SharedHostState, build_client
 from ..models import (
     AccessMode,
     CandidateKind,
@@ -117,6 +117,12 @@ class Pipeline:
         self.max_items = int(self.app.get("run.max_items_per_source", 200))
         self.quarantine_dir = self.app.path("storage.quarantine_dir", "data/quarantine")
 
+        # 같은 호스트를 보는 소스들이 rate limit·robots 캐시·동일 요청 메모를
+        # 공유합니다. 예: law.go.kr DRF 를 target 만 달리해 쓰는 law_go_kr / humanrights.
+        self._shared_http = SharedHostState(
+            user_agent=str(self.app.get("http.user_agent", "DL-RCIS/2.1")),
+            memoize=bool(self.app.get("http.deduplicate_requests", True)),
+        )
         self._clients: dict[str, object] = {}
         self._connectors: dict[str, SourceConnector] = {}
         self._oa_resolver: OpenAccessResolver | None = None
@@ -646,7 +652,9 @@ class Pipeline:
 
     def _client_for(self, source: SourceConfig):
         if source.source_id not in self._clients:
-            self._clients[source.source_id] = build_client(self.app, source)
+            self._clients[source.source_id] = build_client(
+                self.app, source, shared=self._shared_http
+            )
         return self._clients[source.source_id]
 
     def _connector_for(self, source: SourceConfig) -> SourceConnector:
@@ -724,6 +732,11 @@ class Pipeline:
 
     # ------------------------------------------------------------------
     def close(self) -> None:
+        saved = self._shared_http.stats.deduplicated_requests
+        if saved:
+            logger.info("동일 요청 재사용으로 아낀 호출: %d건", saved)
+        # 메모는 실행 단위입니다. 다음 실행이 낡은 응답을 보지 않도록 비웁니다.
+        self._shared_http.clear_memo()
         for client in self._clients.values():
             try:
                 client.close()  # type: ignore[attr-defined]

@@ -482,6 +482,31 @@ def test_humanrights_decisions_query_the_law_drf_with_nhrck(monkeypatch, credent
     assert any(q.get("OC") == "PROBE-OC" for q in queries), "OC 미전송"
 
 
+def test_shared_endpoint_sources_do_not_claim_the_same_target(registry):
+    """같은 엔드포인트를 쓰는 소스끼리 target 이 겹치면 이중 검색이 됩니다.
+
+    국가법령정보 DRF 는 law_go_kr(법령·행정규칙·판례)과 humanrights(위원회 결정문)가
+    target 만 달리해 함께 씁니다. 같은 target 을 두 소스가 선언하면 동일한 질의가
+    두 번 나가고 중복 자료가 유입되므로 등록 단계에서 막습니다.
+    """
+    owner: dict[tuple[str, str], str] = {}
+    for source in registry.enabled():
+        targets = list(getattr(source, "law_targets", None) or [])
+        if not targets:
+            continue
+        for method in source.access_methods:
+            if not method.endpoint:
+                continue
+            for target in targets:
+                key = (method.endpoint, target)
+                previous = owner.get(key)
+                assert previous is None, (
+                    f"{method.endpoint} 의 target={target} 를 "
+                    f"{previous} 와 {source.source_id} 가 함께 선언했습니다."
+                )
+                owner[key] = source.source_id
+
+
 def test_scienceon_is_excluded_with_a_recorded_reason(registry):
     """ScienceON 은 맥주소 기반 인증이라 수집 대상에서 제외했습니다.
 
