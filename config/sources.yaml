@@ -174,9 +174,10 @@ sources:
     priority: 1
     enabled: true
     access_methods:
-      # NKIS 는 오픈API 목록(openSvcList.do)에서 서비스를 선택해야 상세주소·요청인자·
-      # 샘플 URL 이 표시되며, 이 화면은 로그인 후 접근 가능합니다.
-      # 따라서 서비스별 엔드포인트를 추측해 넣지 않고 비워 둡니다.
+      # 엔드포인트는 운영자가 NKIS 오픈API 목록(openSvcList.do, 로그인 필요)에서
+      # 확인해 입력했습니다. 공식 문서를 직접 대조하지는 못했으므로
+      # verification_status 는 PENDING_VERIFICATION 로 둡니다.
+      # `python main.py doctor --probe` 로 실제 응답을 확인하십시오.
       - type: OPEN_API
         auth_type: API_KEY
         credential_required: true
@@ -184,8 +185,8 @@ sources:
         endpoint: "https://nkis.re.kr/nkisApi/search/TongList.do"
         verification_status: PENDING_VERIFICATION
         verified_source: "https://www.nkis.re.kr/openSvcList.do"
-        verified_at: "2026-08-22"
-        verified_method: web_search
+        verified_at: "2026-08-23"
+        verified_method: operator_input
     credential_guide_required: true
     auth_docs_url: "https://www.nkis.re.kr/openDesc.do"
     contact_or_policy_url: "https://www.nkis.re.kr/apiIntro.do"
@@ -197,8 +198,10 @@ sources:
     lookback_days: 3
     notes: >-
       인증키 발급은 회원가입 후 로그인 상태에서 신청합니다(openDesc.do).
-      오픈API 목록(openSvcList.do)에서 사용할 서비스를 고르면 상세주소·요청인자·샘플 URL 이
-      표시되므로, 그 값을 endpoint 와 request/field_map 에 입력하면 즉시 동작합니다.
+      엔드포인트는 입력되었으나 request/field_map 은 아직 기본값(공공데이터포털 표준 형식)
+      이므로, NKIS 자체 API 의 실제 요청인자·응답 필드명과 다르면 결과가 0건으로 나옵니다.
+      openSvcList.do 의 '요청인자'·'출력결과' 표를 보고 아래 request/field_map 을 맞추십시오.
+      확인은 `python main.py doctor --probe` 로 합니다.
 
   - source_id: prism
     name: "PRISM 정책연구관리시스템"

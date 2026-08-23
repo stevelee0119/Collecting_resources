@@ -328,7 +328,7 @@ def test_verified_methods_cite_a_source(registry):
             label = f"{source.source_id}/{method.type}"
             assert method.verified_source, f"{label}: 확인근거 URL 이 없습니다."
             assert method.verified_at, f"{label}: 확인 일자가 없습니다."
-            assert method.verified_method in ("official_doc", "web_search"), (
+            assert method.verified_method in ("official_doc", "web_search", "operator_input"), (
                 f"{label}: 확인 경로가 기록되지 않았습니다."
             )
 
@@ -360,14 +360,29 @@ def test_verified_source_is_on_an_official_domain(registry):
 
 
 def test_unverified_sources_have_no_guessed_endpoint(registry):
-    """확인되지 않은 소스에 추측한 엔드포인트를 넣지 않습니다 (URL 환각 금지)."""
+    """확인되지 않은 소스에 추측한 엔드포인트를 넣지 않습니다 (URL 환각 금지).
+
+    운영자가 자기 계정으로 확인해 직접 입력한 값(`verified_method: operator_input`)은
+    추측이 아니므로 허용합니다. 다만 공식 문서 대조 전까지는
+    `verification_status` 를 PENDING_VERIFICATION 로 유지해야 합니다.
+    """
     for source in registry.sources:
         for method in source.access_methods:
             if method.verification_status == "VERIFIED":
                 continue
+            if method.verified_method == "operator_input":
+                # 출처와 입력 일자는 남겨야 추적이 가능합니다.
+                assert method.verified_source, (
+                    f"{source.source_id}/{method.type}: operator_input 인데 근거가 없습니다."
+                )
+                assert method.verified_at, (
+                    f"{source.source_id}/{method.type}: operator_input 인데 입력 일자가 없습니다."
+                )
+                continue
             assert not method.endpoint, (
                 f"{source.source_id}/{method.type}: 확인되지 않았는데 endpoint 가 "
-                f"채워져 있습니다 ({method.endpoint})."
+                f"채워져 있습니다 ({method.endpoint}). 운영자가 직접 넣은 값이라면 "
+                f"verified_method 를 operator_input 으로 표시하십시오."
             )
 
 

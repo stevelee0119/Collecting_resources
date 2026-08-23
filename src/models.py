@@ -130,7 +130,8 @@ class AccessMethod(BaseModel):
     verified_source: str = ""
     #: 확인 일자
     verified_at: date | None = None
-    #: 확인 경로 — official_doc(직접 열람) / web_search(공식 문서 검색결과) / none
+    #: 확인 경로 — official_doc(직접 열람) / web_search(공식 문서 검색결과)
+    #:            / operator_input(운영자가 계정으로 확인해 직접 입력) / none
     #: 감사가능성(§18.4)을 위해 "무엇을 근거로 확정했는지"를 남깁니다.
     verified_method: str = "none"
 

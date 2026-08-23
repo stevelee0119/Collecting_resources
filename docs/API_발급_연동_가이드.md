@@ -33,7 +33,7 @@
 
 - KCI 한국학술지인용색인 (`kci` / OPEN_API) — 발급 후 `.env` 에 `KCI_API_KEY` 설정
 - ScienceON (KISTI) (`scienceon` / OPEN_API) — 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정
-- NKIS 국가정책연구포털 (`nkis` / OPEN_API) — 공식 문서(https://www.nkis.re.kr/openDesc.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- NKIS 국가정책연구포털 (`nkis` / OPEN_API) — 발급 후 `.env` 에 `NKIS_API_KEY` 설정
 - PRISM 정책연구관리시스템 (`prism` / OPEN_API) — 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정
 - 국가법령정보 공동활용 (`law_go_kr` / OPEN_API) — 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정
 - 국회입법조사처 (`nars` / OPEN_API) — 공식 문서(https://www.data.go.kr/data/15125970/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
@@ -106,7 +106,7 @@ Secrets 이름을 이와 동일하게 맞추면 워크플로에서 그대로 매
 | `KCI_API_KEY` | KCI 한국학술지인용색인 OPEN_API | ✅ 필수 |
 | `RISS_API_KEY` | RISS 학술연구정보서비스 OPEN_API | ➖ 불필요 (엔드포인트 미확정) |
 | `SCIENCEON_API_KEY` | ScienceON (KISTI) OPEN_API | ✅ 필수 |
-| `NKIS_API_KEY` | NKIS 국가정책연구포털 OPEN_API | ➖ 불필요 (엔드포인트 미확정) |
+| `NKIS_API_KEY` | NKIS 국가정책연구포털 OPEN_API | ✅ 필수 |
 | `DATA_GO_KR_API_KEY` | PRISM 정책연구관리시스템 OPEN_API | ✅ 필수 |
 | `LAW_GO_KR_OC` | 국가법령정보 공동활용 OPEN_API | ✅ 필수 |
 | `CONTACT_EMAIL` | Crossref OPEN_API | 선택 (있으면 쿼터·속도 유리) |
@@ -190,7 +190,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | KCI 한국학술지인용색인 (`kci`) | OPEN_API / API Key 필요 | `KCI_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `KCI_API_KEY` 설정 |
 | RISS 학술연구정보서비스 (`riss`) | OPEN_API / 기관 승인 필요 | `RISS_API_KEY` | ➖ 대상 아님 | 자동수집 대상이 아닙니다. 추가 조치 불필요. |
 | ScienceON (KISTI) (`scienceon`) | OPEN_API / API Key 필요 | `SCIENCEON_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `SCIENCEON_API_KEY` 설정 |
-| NKIS 국가정책연구포털 (`nkis`) | OPEN_API / API Key 필요 | `NKIS_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.nkis.re.kr/openDesc.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
+| NKIS 국가정책연구포털 (`nkis`) | OPEN_API / API Key 필요 | `NKIS_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `NKIS_API_KEY` 설정 |
 | PRISM 정책연구관리시스템 (`prism`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 발급 후 `.env` 에 `DATA_GO_KR_API_KEY` 설정 |
 | 국가법령정보 공동활용 (`law_go_kr`) | OPEN_API / API Key 필요 | `LAW_GO_KR_OC` | ⬜ 조치 필요 | 발급 후 `.env` 에 `LAW_GO_KR_OC` 설정 |
 | 국회입법조사처 (`nars`) | OPEN_API / API Key 필요 | `DATA_GO_KR_API_KEY` | ⬜ 조치 필요 | 공식 문서(https://www.data.go.kr/data/15125970/openapi.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력 |
@@ -319,9 +319,9 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 
 ### NKIS 국가정책연구포털 (`nkis`)
 
-- **조치 현황: ⬜ 조치 필요** — 공식 문서(https://www.nkis.re.kr/openDesc.do)에서 상세주소를 확인해 `config/sources.yaml` 의 `endpoint` 에 입력
+- **조치 현황: ⬜ 조치 필요** — 발급 후 `.env` 에 `NKIS_API_KEY` 설정
 - **OPEN_API** — 인증: API Key 필요 / 사전 발급 필요: 예 / 환경변수: `NKIS_API_KEY` / 확인상태: `PENDING_VERIFICATION`
-  - 확인근거: https://www.nkis.re.kr/openSvcList.do (2026-08-22, 공식 문서 검색결과 기준)
+  - 확인근거: https://www.nkis.re.kr/openSvcList.do (2026-08-23, 운영자가 직접 입력 (공식 문서 대조 전))
 
 | 항목 | 내용 |
 | --- | --- |
@@ -343,7 +343,7 @@ API 발급·인증 방식은 변경될 수 있습니다. **Connector 를 실제�
 | 16. 공식 문서 최종 확인일 | 2026-08-22 |
 
 **설정된 엔드포인트**
-  - (미설정)
+  - `https://nkis.re.kr/nkisApi/search/TongList.do`
 
 **수집 정책**: `download_policy: allowed` / `robots_policy: respect` / `rate_limit_rps: 0.5`
 

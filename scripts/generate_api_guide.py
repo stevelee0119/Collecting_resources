@@ -431,6 +431,7 @@ def _method_label(verified_method: str) -> str:
     return {
         "official_doc": "공식 문서 직접 열람",
         "web_search": "공식 문서 검색결과 기준",
+        "operator_input": "운영자가 직접 입력 (공식 문서 대조 전)",
         "none": "미확인",
     }.get(verified_method or "none", verified_method)
 
