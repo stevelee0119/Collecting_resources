@@ -3,7 +3,7 @@
 > 이 문서는 `config/sources.yaml` 에서 **자동 생성**됩니다.
 > 수정하려면 `config/sources.yaml` 을 고친 뒤 `python main.py api-guide` 를 다시 실행하십시오.
 >
-> - 생성일: 2026-08-23
+> - 생성일: 2026-08-24
 > - Source Registry 버전: `2026.08.22-1`
 > - 대상 소스: 전체 22개 (사전 발급·승인 필요 15개)
 
@@ -977,7 +977,7 @@ PRD §15.4 는 SMTP 앱 비밀번호보다 **Gmail API + OAuth 2.0** 을 우선 
 | 13. 동작 확인 | `python main.py run --daily --source arxiv` 후 수신함 확인 |
 | 14. 키 갱신·회수 | Google Cloud Console → 사용자 인증 정보에서 클라이언트 폐기, 계정 보안 설정에서 액세스 권한 철회 |
 | 15. 주의사항 | `client_secret.json` 과 토큰 파일을 Git 에 커밋하지 마십시오. |
-| 16. 공식 문서 확인일 | `2026-08-23` |
+| 16. 공식 문서 확인일 | `2026-08-24` |
 
 `config/config.yaml` 에서 `notification.email.transport: "gmail_api"` 로 설정합니다.
 
@@ -1092,4 +1092,4 @@ jobs:
 > 저작권·라이선스를 검토한 뒤 보관 위치를 직접 정하십시오.
 
 
-> 마지막 생성: 2026-08-23 · `python main.py api-guide` 로 재생성할 수 있습니다.
+> 마지막 생성: 2026-08-24 · `python main.py api-guide` 로 재생성할 수 있습니다.

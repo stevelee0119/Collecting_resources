@@ -858,6 +858,9 @@ sources:
     download_policy: allowed
     # arXiv 이용약관상 요청 간 3초 이상 간격 권장
     rate_limit_rps: 0.33
+    # 질의가 길면 응답이 30초를 넘기는 경우가 있어 넉넉히 둡니다
+    # (2026-08-24 probe 에서 ReadTimeout 발생).
+    timeout_seconds: 60
     lookback_days: 3
     arxiv_categories: ["cs.AI", "cs.CL", "cs.CY"]
 

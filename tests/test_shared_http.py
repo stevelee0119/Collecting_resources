@@ -332,3 +332,86 @@ def test_http_error_description_surfaces_rate_limit_headers():
     assert "429" in described
     assert "x-ratelimit-remaining=0" in described
     assert "retry-after=60" in described
+
+
+def test_openalex_sends_the_key_as_a_url_parameter(monkeypatch, credential_probe):
+    """OpenAlex 공식 방식은 api_key URL 파라미터입니다.
+
+    사용량이 0 인데 429 가 나오는 상황을 진단하려면, 먼저 우리 쪽이
+    키를 제대로 싣고 있는지가 확정되어야 합니다.
+    """
+    from datetime import date
+
+    monkeypatch.setenv("OPENALEX_API_KEY", "PROBE-OPENALEX")
+    requests = credential_probe("openalex", "OPEN_API", date(2026, 8, 1), date(2026, 8, 23))
+
+    assert requests, "요청이 발생하지 않았습니다."
+    assert any(r["query"].get("api_key") == "PROBE-OPENALEX" for r in requests), (
+        "api_key 가 URL 파라미터로 실리지 않았습니다."
+    )
+
+
+def test_edge_headers_are_surfaced_for_blocked_responses():
+    """엣지(CDN·WAF)에서 잘린 것인지 구분할 수 있어야 합니다.
+
+    cf-ray 가 보이면 API 가 아니라 앞단에서 막힌 것이므로,
+    키를 고쳐도 소용이 없습니다.
+    """
+    import httpx
+
+    from src.http_client import describe_http_error
+
+    request = httpx.Request("GET", "https://api.openalex.org/works")
+    response = httpx.Response(
+        429,
+        request=request,
+        headers={"cf-ray": "9abc123-ICN", "server": "cloudflare"},
+        text="error code: 1015",
+    )
+    exc = httpx.HTTPStatusError("rate", request=request, response=response)
+
+    described = describe_http_error(exc)
+    assert "cf-ray=9abc123-ICN" in described
+    assert "server=cloudflare" in described
+
+
+def test_429_without_retry_after_is_not_hammered(counting_server):
+    """Retry-After 가 없는 429 는 짧은 간격으로 다시 두드리지 않습니다."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from src.http_client import RateLimitedError
+
+    hits: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            hits.append(self.path)
+            body = b"too many"
+            self.send_response(429)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    client = PoliteClient(
+        user_agent="DL-RCIS/test",
+        rate_limit_rps=100.0,
+        respect_robots=False,
+        max_retries=3,
+        backoff_base=0.01,
+    )
+    try:
+        with pytest.raises(RateLimitedError):
+            client.get(f"http://127.0.0.1:{server.server_address[1]}/works")
+    finally:
+        client.close()
+        server.shutdown()
+        server.server_close()
+
+    # 최초 1회 + 재시도 1회. 3회까지 두드리면 IP 평판만 나빠집니다.
+    assert len(hits) == 2, f"429 에 {len(hits)}번 요청했습니다."

@@ -388,14 +388,21 @@ class PoliteClient:
                 retry_after = self._retry_after_seconds(response)
                 if stream:
                     response.close()
-                if attempt >= self.max_retries:
+                # 429 를 짧은 간격으로 다시 두드리면 IP 평판만 나빠집니다.
+                # Retry-After 가 없으면 1회만 더 시도합니다.
+                max_attempts = (
+                    self.max_retries
+                    if response.status_code != 429 or retry_after is not None
+                    else 1
+                )
+                if attempt >= max_attempts:
                     self.breaker.record_failure()
                     if response.status_code == 429:
                         quota = " ".join(
                             f"{name}={value}"
                             for name, value in response.headers.items()
                             if name.lower().startswith("x-ratelimit")
-                            or name.lower() == "retry-after"
+                            or name.lower() in ("retry-after", "cf-ray", "server")
                         )
                         detail = f" [{quota}]" if quota else ""
                         raise RateLimitedError(f"호출량 초과(429): {url}{detail}")
@@ -498,12 +505,15 @@ def describe_http_error(exc: BaseException, *, body_chars: int = 240) -> str:
 
     host = urlparse(str(response.url)).netloc
 
-    # 429 는 본문보다 헤더가 더 많은 것을 말해 줍니다.
-    # 키가 인식되면 남은 허용량이 헤더에 실리므로, 키 문제인지 한도 문제인지 갈립니다.
+    # 429·403 은 본문보다 헤더가 더 많은 것을 말해 줍니다.
+    #  - x-ratelimit-* : 계정 단위 한도. 있으면 키가 인식된 것입니다.
+    #  - cf-ray / server: 엣지(CDN·WAF)에서 잘린 것인지 구분해 줍니다.
+    #    API 가 아니라 앞단에서 막혔다면 키를 고쳐도 소용이 없습니다.
     quota = " ".join(
         f"{name}={value}"
         for name, value in response.headers.items()
-        if name.lower().startswith("x-ratelimit") or name.lower() == "retry-after"
+        if name.lower().startswith("x-ratelimit")
+        or name.lower() in ("retry-after", "cf-ray", "server", "x-request-id")
     )
     body = ""
     try:
@@ -573,7 +583,11 @@ def build_client(
         api_endpoints=official_api_endpoints(source),
         user_agent=resolve_user_agent(app_config),
         rate_limit_rps=float(getattr(source, "rate_limit_rps", 0.5)),
-        timeout=float(app_config.get("http.timeout_seconds", 30)),
+        # 소스가 느릴 수 있으므로 sources.yaml 에서 개별 지정할 수 있게 둡니다
+        # (arXiv 는 질의가 길면 응답이 30초를 넘기기도 합니다).
+        timeout=float(
+            getattr(source, "timeout_seconds", None) or app_config.get("http.timeout_seconds", 30)
+        ),
         download_timeout=float(app_config.get("http.download_timeout_seconds", 120)),
         max_retries=int(app_config.get("http.max_retries", 3)),
         backoff_base=float(app_config.get("http.backoff_base_seconds", 2.0)),
