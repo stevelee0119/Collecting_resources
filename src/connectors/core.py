@@ -97,12 +97,20 @@ class CoreConnector(SourceConnector):
                     data = response.json()
                 except Exception as exc:
                     described = describe_http_error(exc)
-                    # 색인에 없는 속성이면 다음 후보로 넘어갑니다.
-                    if attempt_field and UNKNOWN_PROPERTY_HINT in described:
-                        logger.info(
-                            "[core] '%s' 는 검색 가능한 속성이 아닙니다. 다음 후보를 시도합니다.",
-                            attempt_field,
-                        )
+                    if attempt_field:
+                        # 후보가 남아 있으면 계속 시도합니다. 속성이 없다는 응답이든
+                        # 타임아웃이든, 남은 후보를 건너뛸 이유는 없습니다
+                        # (날짜 조건이 없는 마지막 시도가 가장 가벼운 질의입니다).
+                        if UNKNOWN_PROPERTY_HINT in described:
+                            logger.info(
+                                "[core] '%s' 는 검색 가능한 속성이 아닙니다. 다음 후보를 시도합니다.",
+                                attempt_field,
+                            )
+                        else:
+                            logger.info(
+                                "[core] '%s' 질의 실패(%s). 다음 후보를 시도합니다.",
+                                attempt_field, described,
+                            )
                         continue
                     logger.warning(
                         "[core] 질의 실패: %s (질의: %.40s)", described, query.query_string

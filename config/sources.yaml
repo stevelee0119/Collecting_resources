@@ -770,6 +770,8 @@ sources:
     # Connector 가 이 순서로 시도하고 통하는 것을 골라 씁니다.
     # 어느 것이 통하는지 확인되면 여기에 고정하면 시도 횟수가 줄어듭니다.
     core_date_field: "depositedDate"
+    # 긴 불리언 질의는 응답이 30초를 넘기기도 합니다 (2026-08-24 ReadTimeout 확인).
+    timeout_seconds: 60
     lookback_days: 3
 
   - source_id: unpaywall
