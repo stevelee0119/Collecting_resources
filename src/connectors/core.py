@@ -26,6 +26,15 @@ from .base import SourceConnector
 logger = logging.getLogger(__name__)
 
 
+#: CORE v3 문서상 **검색 가능한** 날짜 관련 속성 (2026-08-24 운영자 확인).
+#: 응답 본문에 있는 이름과 검색 가능한 이름이 다르므로 주의합니다
+#: (예: publishedDate 는 응답에 있으나 검색 속성이 아닙니다).
+CORE_DATE_FIELDS = ("depositedDate", "createdDate", "yearPublished")
+
+#: 색인에 없는 속성으로 질의했을 때 CORE 가 돌려주는 문구.
+UNKNOWN_PROPERTY_HINT = "Could not find a property"
+
+
 class CoreConnector(SourceConnector):
     connector_id = "core"
 
@@ -36,42 +45,62 @@ class CoreConnector(SourceConnector):
         token = self.secret_for(method)
         return {"Authorization": f"Bearer {token}"} if token else {}
 
+    # ------------------------------------------------------------------
+    def _date_candidates(self) -> list[str]:
+        """시도할 날짜 속성 순서. 마지막 빈 문자열은 '날짜 조건 없음'입니다."""
+        configured = str(getattr(self.config, "core_date_field", "") or "")
+        ordered = [configured] if configured else []
+        ordered += [f for f in CORE_DATE_FIELDS if f != configured]
+        return [*ordered, ""]
+
+    @staticmethod
+    def _date_predicate(field: str, since: date) -> str:
+        """속성마다 값의 형식이 다릅니다. yearPublished 는 연도 정수입니다."""
+        if field == "yearPublished":
+            return f"{field}>={since.year}"
+        return f"{field}>={since.isoformat()}"
+
     def discover(self, since: date, until: date, queries: Sequence[Query]) -> Iterator[RawItem]:
         method = self.require_method("OPEN_API")
         headers = self._headers()
         seen: set[str] = set()
         emitted = 0
+        # 한 번 통한 속성은 이 실행 안에서 계속 씁니다.
+        working_field: str | None = None
 
         for query in queries:
             if emitted >= self._limit():
                 return
-            # CORE 는 검색 색인에 없는 속성을 쓰면 500 을 돌려줍니다.
-            # 2026-08-23 확인: createdDate 로 질의하면
-            # "Could not find a property named 'createdDate'" 가 납니다.
-            # 응답 본문에는 있지만 **검색 가능한 속성은 아닙니다.**
-            date_field = str(getattr(self.config, "core_date_field", "") or "publishedDate")
+
+            candidates = [working_field] if working_field is not None else self._date_candidates()
             data = None
-            for attempt_field in (date_field, ""):
+            for attempt_field in candidates:
                 body: dict[str, object] = {
                     "q": query.query_string,
                     "limit": self.PAGE_SIZE,
                 }
                 if attempt_field:
-                    body["q"] = f"({query.query_string}) AND {attempt_field}>={since.isoformat()}"
+                    body["q"] = (
+                        f"({query.query_string}) AND {self._date_predicate(attempt_field, since)}"
+                    )
                     body["sort"] = f"{attempt_field}:desc"
+                # 후보를 떠보는 호출은 실패가 곧 정보이므로 재시도하지 않습니다.
+                probing = working_field is None and attempt_field != ""
                 try:
-                    response = self.ctx.client.post(method.endpoint, json=body, headers=headers)
+                    response = self.ctx.client.post(
+                        method.endpoint,
+                        json=body,
+                        headers=headers,
+                        max_retries=0 if probing else None,
+                    )
                     response.raise_for_status()
                     data = response.json()
-                    break
                 except Exception as exc:
                     described = describe_http_error(exc)
-                    # 날짜 속성이 색인에 없으면 날짜 조건 없이 한 번만 더 시도합니다.
-                    if attempt_field and "Could not find a property" in described:
-                        logger.warning(
-                            "[core] '%s' 는 검색 가능한 속성이 아닙니다. 날짜 조건 없이 "
-                            "재시도합니다. sources.yaml 의 core_date_field 를 "
-                            "공식 문서 기준으로 고치십시오.",
+                    # 색인에 없는 속성이면 다음 후보로 넘어갑니다.
+                    if attempt_field and UNKNOWN_PROPERTY_HINT in described:
+                        logger.info(
+                            "[core] '%s' 는 검색 가능한 속성이 아닙니다. 다음 후보를 시도합니다.",
                             attempt_field,
                         )
                         continue
@@ -79,6 +108,20 @@ class CoreConnector(SourceConnector):
                         "[core] 질의 실패: %s (질의: %.40s)", described, query.query_string
                     )
                     break
+
+                if working_field is None:
+                    working_field = attempt_field
+                    if attempt_field:
+                        logger.info("[core] 날짜 속성 '%s' 로 조회합니다.", attempt_field)
+                    else:
+                        logger.warning(
+                            "[core] 쓸 수 있는 날짜 속성을 찾지 못해 날짜 조건 없이 조회합니다. "
+                            "후보: %s. 공식 문서에서 확인해 sources.yaml 의 core_date_field 에 "
+                            "넣으면 서버에서 걸러집니다.",
+                            ", ".join(CORE_DATE_FIELDS),
+                        )
+                break
+
             if data is None:
                 continue
 

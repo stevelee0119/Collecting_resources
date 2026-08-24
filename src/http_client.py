@@ -336,9 +336,16 @@ class PoliteClient:
         *,
         conditional: bool = False,
         stream: bool = False,
+        max_retries: int | None = None,
         **kwargs: Any,
     ) -> httpx.Response:
-        """재시도·rate limit·robots 검사를 적용한 요청."""
+        """재시도·rate limit·robots 검사를 적용한 요청.
+
+        `max_retries` 로 이 요청만 재시도 횟수를 바꿀 수 있습니다. 실패가
+        곧 정보인 탐색성 호출(예: 색인에 그 속성이 있는지 떠보기)에서
+        기본 재시도를 그대로 쓰면 시간만 낭비합니다.
+        """
+        retries = self.max_retries if max_retries is None else max(0, max_retries)
         if self.respect_robots and not self._is_registered_api(url):
             if not self.robots.allowed(url):
                 raise RobotsDisallowedError(f"robots.txt 가 수집을 허용하지 않습니다: {url}")
@@ -363,7 +370,7 @@ class PoliteClient:
         )
 
         last_error: Exception | None = None
-        for attempt in range(self.max_retries + 1):
+        for attempt in range(retries + 1):
             self.limiter.acquire()
             if host_limiter is not None:
                 host_limiter.acquire()
@@ -378,7 +385,7 @@ class PoliteClient:
                     response = self._client.request(method, url, headers=headers, timeout=timeout, **kwargs)
             except httpx.HTTPError as exc:
                 last_error = exc
-                if attempt >= self.max_retries:
+                if attempt >= retries:
                     break
                 self._sleep_backoff(attempt)
                 continue
@@ -391,9 +398,7 @@ class PoliteClient:
                 # 429 를 짧은 간격으로 다시 두드리면 IP 평판만 나빠집니다.
                 # Retry-After 가 없으면 1회만 더 시도합니다.
                 max_attempts = (
-                    self.max_retries
-                    if response.status_code != 429 or retry_after is not None
-                    else 1
+                    retries if response.status_code != 429 or retry_after is not None else 1
                 )
                 if attempt >= max_attempts:
                     self.breaker.record_failure()

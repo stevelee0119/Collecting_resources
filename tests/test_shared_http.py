@@ -415,3 +415,109 @@ def test_429_without_retry_after_is_not_hammered(counting_server):
 
     # 최초 1회 + 재시도 1회. 3회까지 두드리면 IP 평판만 나빠집니다.
     assert len(hits) == 2, f"429 에 {len(hits)}번 요청했습니다."
+
+
+# ---------------------------------------------------------------------------
+# CORE 날짜 속성 후보 순회
+# ---------------------------------------------------------------------------
+
+def _core_server(reject: set[str]):
+    """지정한 속성으로 질의하면 CORE 처럼 500 을 돌려주는 대역 서버."""
+    import json
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    state: dict = {"queries": []}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length) or b"{}")
+            query = str(body.get("q", ""))
+            state["queries"].append(query)
+
+            bad = next((f for f in reject if f in query), None)
+            if bad:
+                payload = json.dumps(
+                    {"message": f"Azure search failed. Could not find a property named '{bad}'"}
+                ).encode()
+                self.send_response(500)
+            else:
+                payload = json.dumps({"results": []}).encode()
+                self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, state, f"http://127.0.0.1:{server.server_address[1]}/v3/search/works"
+
+
+def _run_core(settings, endpoint, monkeypatch):
+    from datetime import date
+
+    from src.connectors import ConnectorContext, build_connector
+    from src.discovery.query_expander import QueryExpander
+
+    monkeypatch.setenv("CORE_API_KEY", "PROBE-CORE")
+    source = settings.sources.get("core")
+    source.access_methods[0].endpoint = endpoint
+    client = PoliteClient(user_agent="DL-RCIS/test", rate_limit_rps=100.0, respect_robots=False)
+    expander = QueryExpander(settings.search_terms)
+    connector = build_connector(
+        source, ConnectorContext(app=settings.app, client=client, expander=expander, max_items=1)
+    )
+    try:
+        list(connector.discover(date(2026, 8, 1), date(2026, 8, 24),
+                                connector.prepare_queries()[:1]))
+    finally:
+        client.close()
+
+
+def test_core_falls_through_to_the_next_date_field(settings, monkeypatch):
+    """색인에 없는 속성이면 다음 후보로 넘어가야 합니다."""
+    server, state, endpoint = _core_server(reject={"depositedDate", "createdDate"})
+    try:
+        _run_core(settings, endpoint, monkeypatch)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    tried = " | ".join(state["queries"])
+    assert "depositedDate" in tried
+    assert "createdDate" in tried
+    # 세 번째 후보로 성공해야 합니다.
+    assert "yearPublished>=2026" in tried, f"실제 시도: {tried}"
+
+
+def test_core_stops_at_the_first_working_field(settings, monkeypatch):
+    """첫 후보가 통하면 다른 후보를 시도하지 않습니다."""
+    server, state, endpoint = _core_server(reject=set())
+    try:
+        _run_core(settings, endpoint, monkeypatch)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert len(state["queries"]) == 1
+    assert "depositedDate>=2026-08-01" in state["queries"][0]
+
+
+def test_core_gives_up_on_the_date_filter_rather_than_failing(settings, monkeypatch):
+    """후보가 모두 막히면 날짜 조건 없이라도 조회합니다."""
+    server, state, endpoint = _core_server(
+        reject={"depositedDate", "createdDate", "yearPublished"}
+    )
+    try:
+        _run_core(settings, endpoint, monkeypatch)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    # 마지막 시도에는 날짜 조건이 없어야 합니다.
+    assert not any(f in state["queries"][-1] for f in ("depositedDate", "createdDate", "yearPublished"))
